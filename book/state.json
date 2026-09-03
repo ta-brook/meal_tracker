@@ -1,7 +1,11 @@
 {
   "gender": "male",
   "goal": null,
-  "logs": {},
+  "logs": {
+    "2026-09-03": [
+      "plan-1-1-male"
+    ]
+  },
   "meals": [],
   "name": "BOok",
   "target": 2000,
