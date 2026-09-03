@@ -4,7 +4,16 @@
   "logs": {
     "2026-09-03": []
   },
-  "meals": [],
+  "meals": [
+    {
+      "id": "custom-00e62439-8bfe-49f7-b8c2-37efaf141d2d",
+      "name": "test",
+      "kcal": 500,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0
+    }
+  ],
   "name": "BOok",
   "target": 2000,
   "weights": []
