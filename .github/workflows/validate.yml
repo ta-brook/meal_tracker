@@ -11,5 +11,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m py_compile api/index.py
-      - run: python -c "import json; json.load(open('data/state.json', encoding='utf-8'))"
+      - run: python -m compileall -q api
+      - run: python -c "import json; [json.load(open(p, encoding='utf-8')) for p in ('data/book/state.json', 'data/jingjing/state.json')]"

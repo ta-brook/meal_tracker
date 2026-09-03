@@ -35,15 +35,44 @@ async function loadCatalog(){try{CATALOG=await api("/api/meal-catalog")}catch(e)
 async function loadCloud(){
   const c=await api("/api/config"); auth=c.auth;persistent=c.persistent;
   const s=await api("/api/state"); state.users=s.users; migrate(); localSave();
+  pendingMessages=[]; if(debounceTimer){clearTimeout(debounceTimer);debounceTimer=null}
   await loadCatalog();
-  setBanner(persistent?"☁️ <b>Cloud persistence ON</b> — each user has a separate GitHub file.":"💾 <b>Local mode</b> — add GitHub environment variables for durable cloud storage.","ok");
+  setBanner(persistent?"☁️ <b>Cloud persistence ON</b> — saves are batched every 30s.":"💾 <b>Local mode</b> — add GitHub environment variables for durable cloud storage.","ok");
 }
-async function save(){
+const SAVE_DELAY_MS = 30000;
+let debounceTimer = null, pendingMessages = [];
+function queueSave(msg){
   migrate(); localSave();
-  if(!persistent) return true;
-  await api("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({users:state.users})});
-  return true;
+  if(!persistent) return;
+  if(msg) pendingMessages.push(msg);
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(flushSave, SAVE_DELAY_MS);
 }
+async function flushSave(){
+  debounceTimer = null;
+  if(!persistent || pendingMessages.length===0) return;
+  const msgs = pendingMessages; pendingMessages = [];
+  const message = [...new Set(msgs)].join("; ").slice(0, 200);
+  try{
+    await api("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({users:state.users,message})});
+  }catch(e){
+    pendingMessages = msgs.concat(pendingMessages);
+    if(e.message.includes("Data changed elsewhere")){
+      setBanner("⚠️ Data changed elsewhere — reloading latest from server.","warn");
+      try{await loadCloud()}catch(_){}
+      renderAll();
+      return;
+    }
+    setBanner("⚠️ Save failed — will retry in 30s.","warn");
+    debounceTimer = setTimeout(flushSave, SAVE_DELAY_MS);
+  }
+}
+window.addEventListener("pagehide",()=>{
+  if(!persistent || pendingMessages.length===0) return;
+  const message = [...new Set(pendingMessages)].join("; ").slice(0, 200);
+  const headers={"Content-Type":"application/json"}; if(password) headers["X-App-Password"]=password;
+  fetch("/api/state",{method:"POST",keepalive:true,headers,body:JSON.stringify({users:state.users,message})});
+});
 function logs(d){return user().logs[d]||[]}
 function findMeal(id){
   const m=user().meals.find(x=>x.id===id); if(m) return m;
@@ -80,12 +109,12 @@ function meals(){
 }
 function planView(){
   renderUserSwitch();$("genderSelect").value=user().gender;$("weekButtons").innerHTML=[1,2,3,4].map(w=>`<button class="week-btn ${week===w?"active":""}" onclick="week=${w};planView();dashboard()">Week ${w}</button>`).join("");const ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);$("planTotal").textContent=`${Math.round(pk)} kcal/day planned (${user().gender==="male"?"male":"female"} quantities)`;const d=$("datePicker").value||today();$("planContent").innerHTML=ps.map(m=>{const logged=logs(d).includes(m.id);return `<article class="plan-meal"><header><div><span class="tag">Meal ${m.slot}</span><h3>${esc(m.name)}</h3></div><div class="nutrition"><b>${m.kcal} kcal</b><span>P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</span></div><button class="${logged?"logged":"primary"} small" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log this planned meal"}</button></header><div class="plan-body"><h4>Ingredients</h4><div class="ingredients">${m.ingredients.split("|").map(x=>`<p>${esc(x)}</p>`).join("")}</div><h4>Method</h4><ol>${m.method.split("|").map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div></article>`}).join("")}
-$("genderSelect").onchange=async e=>{user().gender=e.target.value;await save();planView();dashboard();toast("Quantity profile updated")};
-async function logMeal(id){const d=$("datePicker").value||today();user().logs[d] ||= [];if(user().logs[d].includes(id)){toast("Already logged today",false);return}user().logs[d].push(id);try{await save();renderAll();toast(`✓ ${findMeal(id)?.name||"Meal"} logged for ${user().name}`)}catch(e){user().logs[d]=user().logs[d].filter(x=>x!==id);localSave();toast("Could not save the meal",false)}}
-async function removeLog(id){const d=$("datePicker").value||today();user().logs[d]=(user().logs[d]||[]).filter(x=>x!==id);await save();renderAll();toast("Meal removed")}
-function mealForm(quick=false){openModal(`<h2>Add meal for ${esc(user().name)}</h2><form id="mf"><label>Meal name<input name="name" required placeholder="Chicken rice"></label><div class="form-grid"><label>kcal<input name="kcal" type="number" min="0" required></label><label>Protein (g)<input name="protein" type="number" min="0" step=".1" value="0"></label><label>Carbs (g)<input name="carbs" type="number" min="0" step=".1" value="0"></label><label>Fat (g)<input name="fat" type="number" min="0" step=".1" value="0"></label></div><button class="primary">Save meal</button></form>`);$("mf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id="custom-"+crypto.randomUUID();user().meals.push({id,name:f.get("name"),kcal:n(f.get("kcal")),protein:n(f.get("protein")),carbs:n(f.get("carbs")),fat:n(f.get("fat"))});await save();closeModal();renderAll();toast("✓ Meal saved");if(quick)await logMeal(id)}}
+$("genderSelect").onchange=async e=>{user().gender=e.target.value;queueSave(`Change quantity profile for ${user().name}`);planView();dashboard();toast("Quantity profile updated")};
+async function logMeal(id){const d=$("datePicker").value||today();user().logs[d] ||= [];if(user().logs[d].includes(id)){toast("Already logged today",false);return}user().logs[d].push(id);const m=findMeal(id);queueSave(m?`Log meal "${m.name}" for ${user().name}`:`Log meal ${id} for ${user().name}`);renderAll();toast(`✓ ${m?.name||"Meal"} logged for ${user().name}`)}
+async function removeLog(id){const d=$("datePicker").value||today();user().logs[d]=(user().logs[d]||[]).filter(x=>x!==id);queueSave(`Remove logged meal for ${user().name}`);renderAll();toast("Meal removed")}
+function mealForm(quick=false){openModal(`<h2>Add meal for ${esc(user().name)}</h2><form id="mf"><label>Meal name<input name="name" required placeholder="Chicken rice"></label><div class="form-grid"><label>kcal<input name="kcal" type="number" min="0" required></label><label>Protein (g)<input name="protein" type="number" min="0" step=".1" value="0"></label><label>Carbs (g)<input name="carbs" type="number" min="0" step=".1" value="0"></label><label>Fat (g)<input name="fat" type="number" min="0" step=".1" value="0"></label></div><button class="primary">Save meal</button></form>`);$("mf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id="custom-"+crypto.randomUUID(),meal={id,name:f.get("name"),kcal:n(f.get("kcal")),protein:n(f.get("protein")),carbs:n(f.get("carbs")),fat:n(f.get("fat"))};user().meals.push(meal);queueSave(`Add custom meal "${meal.name}"`);closeModal();renderAll();toast("✓ Meal saved");if(quick)await logMeal(id)}}
 $("openMealForm").onclick=()=>mealForm();$("quickAdd").onclick=()=>mealForm(true);
-async function deleteMeal(id){if(!confirm("Delete this meal?"))return;user().meals=user().meals.filter(x=>x.id!==id);Object.keys(user().logs).forEach(d=>user().logs[d]=(user().logs[d]||[]).filter(x=>x!==id));await save();renderAll();toast("Meal deleted")}
+async function deleteMeal(id){if(!confirm("Delete this meal?"))return;const m=findMeal(id);user().meals=user().meals.filter(x=>x.id!==id);Object.keys(user().logs).forEach(d=>user().logs[d]=(user().logs[d]||[]).filter(x=>x!==id));queueSave(m?`Delete custom meal "${m.name}"`:`Delete custom meal for ${user().name}`);renderAll();toast("Meal deleted")}
 async function refreshCatalog(){try{CATALOG=await api("/api/meal-catalog")}catch(e){CATALOG=[]}}
 async function deleteCatalogMeal(i){
   const name=window.__catNames?.[i];if(!name)return;
@@ -104,13 +133,13 @@ $("openCatalogForm").onclick=()=>{
     try{await api("/api/meal-catalog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rows:[{...base,gender:"male"},{...base,gender:"female"}]})});await refreshCatalog();closeModal();renderAll();toast("✓ Added to catalog")}catch(err){toast(err.message,false)}
   };
 };
-function weightForm(){openModal(`<h2>Log weight for ${esc(user().name)}</h2><form id="wf"><label>Date<input name="date" type="date" value="${today()}" required></label><label>Weight (kg)<input name="weight" type="number" min="1" step=".1" required></label><button class="primary">Save</button></form>`);$("wf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);user().weights=user().weights.filter(x=>x.date!==f.get("date"));user().weights.push({date:f.get("date"),weight:n(f.get("weight"))});await save();closeModal();renderAll();toast("✓ Weight saved")}}
 $("openWeightForm").onclick=weightForm;
+function weightForm(){openModal(`<h2>Log weight for ${esc(user().name)}</h2><form id="wf"><label>Date<input name="date" type="date" value="${today()}" required></label><label>Weight (kg)<input name="weight" type="number" min="1" step=".1" required></label><button class="primary">Save</button></form>`);$("wf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);user().weights=user().weights.filter(x=>x.date!==f.get("date"));const w=n(f.get("weight"));user().weights.push({date:f.get("date"),weight:w});queueSave(`Log weight ${w}kg for ${user().name}`);closeModal();renderAll();toast("✓ Weight saved")}}
 function progress(){renderUserSwitch();const w=[...user().weights].sort((a,b)=>a.date.localeCompare(b.date)),cur=w.at(-1)?.weight,first=w[0]?.weight;$("currentWeight").textContent=cur??"—";$("goalWeight").textContent=user().goal??"—";$("weightChange").textContent=cur!=null&&first!=null?(cur-first).toFixed(1):"—";const r=w.filter(x=>Date.now()-new Date(x.date).getTime()<=604800000);$("avgWeight").textContent=r.length?(r.reduce((a,x)=>a+x.weight,0)/r.length).toFixed(1):"—";const max=Math.max(...w.map(x=>x.weight),1),min=Math.min(...w.map(x=>x.weight),max);$("weightChart").innerHTML=w.length?w.slice(-14).map(x=>`<div class="bar-wrap"><div class="bar" title="${x.date}: ${x.weight} kg" style="height:${max===min?55:15+(x.weight-min)/(max-min)*70}%"></div><div class="bar-label">${x.date.slice(5)}</div></div>`).join(""):"<p class=\"muted\">Log your first weight.</p>";$("weightList").innerHTML=w.slice().reverse().map(x=>`<div class="list-item"><span>${x.date}</span><b>${x.weight} kg</b></div>`).join("")||'<p class="muted">No weigh-ins.</p>'}
 function settings(){renderUserSwitch();$("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("passwordInput").value=password}
-$("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;await save();renderAll();toast("✓ Profile saved")};
+$("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
-$("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().meals=[];user().logs={};user().weights=[];user().name=name;user().gender=gender;user().target=target;await save();renderAll();toast("User data cleared")}};
+$("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().meals=[];user().logs={};user().weights=[];user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
 function openModal(h){$("modalBody").innerHTML=h;$("modal").classList.remove("hidden")}function closeModal(){$("modal").classList.add("hidden")}$("closeModal").onclick=closeModal;$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
 $("exportCsv").onclick=()=>window.location.href="/download/meals.csv";$("exportXlsx").onclick=()=>window.location.href="/download/meals.xlsx";
 function renderAll(){renderUserSwitch();dashboard();meals();planView();progress();settings()}
