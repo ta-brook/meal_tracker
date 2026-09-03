@@ -31,9 +31,11 @@ async function api(path, options={}){
   const r=await fetch(path,options);let data={};try{data=await r.json()}catch(e){}
   if(!r.ok) throw new Error(data.error||`HTTP ${r.status}`); return data;
 }
+async function loadCatalog(){try{CATALOG=await api("/api/meal-catalog")}catch(e){CATALOG=[]}}
 async function loadCloud(){
   const c=await api("/api/config"); auth=c.auth;persistent=c.persistent;
   const s=await api("/api/state"); state.users=s.users; migrate(); localSave();
+  await loadCatalog();
   setBanner(persistent?"☁️ <b>Cloud persistence ON</b> — each user has a separate GitHub file.":"💾 <b>Local mode</b> — add GitHub environment variables for durable cloud storage.","ok");
 }
 async function save(){
@@ -74,7 +76,7 @@ function meals(){
   $("mealLibrary").innerHTML=user().meals.map(m=>{const logged=logs(d).includes(m.id);return `<article class="meal-card"><h3>${esc(m.name)}</h3><span class="tag">Custom</span><p><b>${m.kcal} kcal</b><br>P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</p><div class="actions"><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log today"}</button><button class="danger" onclick="deleteMeal('${m.id}')">Delete</button></div></article>`}).join("")||'<div class="card"><p class="muted">No custom meals yet.</p></div>';
   const uniq={};CATALOG.forEach(r=>{if(r?.meal_name&&!uniq[r.meal_name])uniq[r.meal_name]=r});
   window.__catNames=Object.keys(uniq);
-  $("catalogLibrary").innerHTML=window.__catNames.map((name,i)=>{const row=CATALOG.find(x=>x.meal_name===name&&x.gender===user().gender)||uniq[name];const id=`plan-${n(row.week)}-${n(row.meal)}-${row.gender}`;const logged=logs(d).includes(id);return `<div class="list-item"><span><b>${esc(name)}</b><br><small>Week ${n(row.week)} • Meal ${n(row.meal)} • ${n(row.kcal)} kcal • P ${n(row.protein_g)}g • C ${n(row.carbs_g)}g • F ${n(row.fat_g)}g</small></span><div class="actions"><button class="${logged?"logged":"primary"} small" ${logged?"disabled":""} onclick="logMeal('${id}')">${logged?"✓ Logged today":"Log today"}</button><button class="danger" onclick="deleteCatalogMeal(${i})">Delete</button></div></div>`}).join("")||'<p class="muted">No catalog meals yet. Add one above.</p>';
+  $("catalogLibrary").innerHTML=window.__catNames.map((name,i)=>{const row=CATALOG.find(x=>x.meal_name===name&&x.gender===user().gender)||uniq[name];const id=`plan-${n(row.week)}-${n(row.meal)}-${row.gender}`;const logged=logs(d).includes(id);return `<article class="meal-card"><h3>${esc(name)}</h3><span class="tag">Week ${n(row.week)} • Meal ${n(row.meal)}</span><p><b>${n(row.kcal)} kcal</b><br>P ${n(row.protein_g)}g • C ${n(row.carbs_g)}g • F ${n(row.fat_g)}g</p><div class="actions"><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${id}')">${logged?"✓ Logged today":"+ Add"}</button><button class="danger" onclick="deleteCatalogMeal(${i})">Delete</button></div></article>`}).join("")||'<div class="card"><p class="muted">No catalog meals yet. Add one above.</p></div>';
 }
 function planView(){
   renderUserSwitch();$("genderSelect").value=user().gender;$("weekButtons").innerHTML=[1,2,3,4].map(w=>`<button class="week-btn ${week===w?"active":""}" onclick="week=${w};planView();dashboard()">Week ${w}</button>`).join("");const ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);$("planTotal").textContent=`${Math.round(pk)} kcal/day planned (${user().gender==="male"?"male":"female"} quantities)`;const d=$("datePicker").value||today();$("planContent").innerHTML=ps.map(m=>{const logged=logs(d).includes(m.id);return `<article class="plan-meal"><header><div><span class="tag">Meal ${m.slot}</span><h3>${esc(m.name)}</h3></div><div class="nutrition"><b>${m.kcal} kcal</b><span>P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</span></div><button class="${logged?"logged":"primary"} small" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log this planned meal"}</button></header><div class="plan-body"><h4>Ingredients</h4><div class="ingredients">${m.ingredients.split("|").map(x=>`<p>${esc(x)}</p>`).join("")}</div><h4>Method</h4><ol>${m.method.split("|").map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div></article>`}).join("")}
@@ -115,7 +117,7 @@ function renderAll(){renderUserSwitch();dashboard();meals();planView();progress(
 async function boot(){
   localLoad(); migrate(); state.active_user=localStorage.getItem(KEY+"Active")||state.active_user||"book";
   try{const c=await api("/api/config");auth=c.auth;persistent=c.persistent;if(auth && !password){setBanner("🔐 Enter the app password in Profile & Settings to load cloud data.","warn")}else{await loadCloud()}}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
-  try{CATALOG=await api("/api/meal-catalog")}catch(e){CATALOG=[]}
+  await loadCatalog();
   renderAll();
 }
 boot();

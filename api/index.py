@@ -253,8 +253,7 @@ def put_state():
 
 @app.get("/api/meal-catalog")
 def meal_catalog():
-    if not check_password():
-        return jsonify(error="Unauthorized"), 401
+    # Open like the /download/* endpoints: the meal catalog is not sensitive.
     rows, _ = catalog_source()
     return jsonify(rows)
 
