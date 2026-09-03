@@ -33,16 +33,6 @@ def get_contents(relative_path, binary=False):
     return (raw if binary else raw.decode("utf-8-sig")), r["sha"]
 
 
-def get_contents_or_none(relative_path, binary=False):
-    """Like get_contents, but returns (None, None) on 404 (file does not exist yet)."""
-    try:
-        return get_contents(relative_path, binary=binary)
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None, None
-        raise
-
-
 def read_file_text(relative_path):
     """Return the current file text (GitHub or local fallback), or None if missing."""
     if config.persistent():
@@ -74,23 +64,6 @@ def write_files_local(changes):
         else:
             with open(local_path, "w", encoding="utf-8") as f:
                 f.write(content)
-
-
-def put_contents(relative_path, content, sha, message, binary=False):
-    """Write a repo file via the Contents API. content is str or bytes.
-
-    Creates one commit for this file; pass the previous sha for updates.
-    """
-    if not isinstance(content, bytes):
-        content = content.encode()
-    payload = {
-        "message": message,
-        "content": base64.b64encode(content).decode(),
-        "branch": config.GITHUB_BRANCH,
-    }
-    if sha:
-        payload["sha"] = sha
-    gh("PUT", f"/repos/{config.GITHUB_REPO}/contents/{relative_path}", payload)
 
 
 # --- Atomic multi-file commits via the Git Data API ---

@@ -37,6 +37,7 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
   "gender": "male",
   "target": 2000,
   "goal": null,
+  "age": null,
   "meals": [],
   "logs": {},
   "weights": []
@@ -44,9 +45,10 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
 ```
 
 - `gender` is `"male"` or `"female"`. Defaults: target 2000 (male) / 1600 (female).
+- `age` is an optional nullable int (set in Settings) used only for the dashboard health-age estimate.
 - `logs`: map of `"YYYY-MM-DD"` → array of meal ids. Planned ids look like `plan-<week>-<meal>-<gender>`; shared ids are `custom-<uuid>`.
 - `weights`: array of `{date, weight}`. `goal` nullable. `meals` is legacy (kept for migration, no longer used).
-- `normalize_user` (in `api/state.py`) deeply validates/coerces every field (gender enum, numeric target/goal, well-formed logs/weights) and never raises.
+- `normalize_user` (in `api/state.py`) deeply validates/coerces every field (gender enum, numeric target/goal/age, well-formed logs/weights) and never raises.
 
 **Shared meals** (`meals.json`): `{"meals": [{id, name, kcal, protein, carbs, fat}]}` — one library for the whole app. `findMeal(id)` checks shared meals first, then the catalog.
 
@@ -72,6 +74,7 @@ Columns: `week, meal, meal_name, gender, kcal, protein_g, carbs_g, fat_g, ingred
 - Rendering is imperative (`renderAll` → dashboard/meals/planView/progress/settings); `renderUserSwitch()` at the top of each render; escape user content with `esc()`.
 - **Save path (debounced, batched, robust):** `queueSave(msg)` → `migrate()` + `localSave()` immediately, records the action message, restarts a **30s trailing debounce** → `flushSave()`. `flushSave()` sends one `PUT /api/state` with `{users, meals, message}`. On **409** it retries once, then stashes `state` in `localStorage[KEY+"_backup"]`, reloads server state and warns; the Settings "Restore last backup" button re-applies it. A `pagehide` handler flushes pending changes via `fetch(..., keepalive)` (POST). `loadCloud()` clears pending messages on login.
 - Precise commit messages per action (e.g. `Log meal "…" for BOok`, `Add meal "…"`, `Log weight 70.2kg for jingjing`); batched actions join with `; `.
+- **Health score & health age (rule-based, no AI):** `healthScore()` in `static/app.js` computes a 0–10 score for the active user over the last 7 days from `consistency` (40%), `calorie` adherence (40%) and a `protein` floor (20%, `protein_g×4 ≥ 0.15×kcal`), with short feedback lines. The Dashboard's `#healthCard` renders a `conic-gradient` score ring, three breakdown bars, and `health age ≈ age − round((score−6)×1.5)` (only when `age` is set and ≥1 day logged). Pure derived data — nothing stored.
 
 ## UI / design
 

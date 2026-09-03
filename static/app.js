@@ -1,6 +1,6 @@
 let CATALOG = [];
 const KEY = "mealTrackerV4";
-const EMPTY = {name:"",gender:"male",target:2000,goal:null,meals:[],logs:{},weights:[]};
+const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,meals:[],logs:{},weights:[]};
 let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],active_user:"book"};
 let week = 1, password = sessionStorage.getItem("mealTrackerPassword") || "", persistent = false, auth = false;
 const $ = id => document.getElementById(id);
@@ -101,6 +101,28 @@ function findMeal(id){
   return row ? {id,name:row.meal_name,kcal:n(row.kcal),protein:n(row.protein_g),carbs:n(row.carbs_g),fat:n(row.fat_g),planned:true,week:n(row.week),slot:n(row.meal),ingredients:row.ingredients,method:row.method} : null;
 }
 function totals(d){return logs(d).reduce((a,id)=>{const m=findMeal(id);if(m){a.kcal+=n(m.kcal);a.protein+=n(m.protein);a.carbs+=n(m.carbs);a.fat+=n(m.fat)}return a},{kcal:0,protein:0,carbs:0,fat:0})}
+function dayTotals(u,d){return (u.logs[d]||[]).reduce((a,id)=>{const m=findMeal(id);if(m){a.kcal+=n(m.kcal);a.protein+=n(m.protein);a.carbs+=n(m.carbs);a.fat+=n(m.fat)}return a},{kcal:0,protein:0,carbs:0,fat:0})}
+function healthScore(){
+  const u=user();
+  const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-i);return dt.toISOString().slice(0,10)});
+  const dayData=days.map(d=>({logged:(u.logs[d]||[]).length>0,t:dayTotals(u,d)}));
+  const loggedDays=dayData.filter(x=>x.logged);
+  const consistency=dayData.length?loggedDays.length/dayData.length:0;
+  const cal=loggedDays.length?loggedDays.reduce((a,x)=>a+(1-Math.min(1,Math.abs((x.t.kcal/u.target||0)-1))),0)/loggedDays.length:0;
+  const protein=loggedDays.length?loggedDays.filter(x=>x.t.kcal>0&&x.t.protein*4>=0.15*x.t.kcal).length/loggedDays.length:0;
+  const score=Math.round((consistency*4+cal*4+protein*2)*10)/10;
+  const fb=[];
+  if(!loggedDays.length) fb.push("No meals logged this week — log a meal to build your score.");
+  else{
+    fb.push(`You logged ${loggedDays.length} of ${dayData.length} days.`);
+    const diff=Math.round(loggedDays.reduce((a,x)=>a+x.t.kcal,0)/loggedDays.length/u.target*100);
+    fb.push(diff>105?`Calories averaged ~${diff}% of target.`:diff<95?`Calories averaged ~${diff}% of target — nice.`:`Calories stayed near target.`);
+    const ok=loggedDays.filter(x=>x.t.kcal>0&&x.t.protein*4>=0.15*x.t.kcal).length;
+    if(ok<loggedDays.length) fb.push(`Protein met the floor on ${ok} of ${loggedDays.length} logged days — add chicken, eggs or tofu.`);
+  }
+  return {score,consistency,calorie:cal,protein,fb,logged:loggedDays.length,days:dayData.length};
+}
+function scoreLabel(s){return s>=8?"Excellent":s>=6?"Good":s>=4?"Fair":"Needs work"}
 function planMeals(){
   const g=user().gender;
   return CATALOG.filter(x=>n(x.week)===week&&x.gender===g).sort((a,b)=>n(a.meal)-n(b.meal)).map(x=>({
@@ -116,6 +138,8 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
   $("todayLabel").textContent=d===today()?"Today":d;["kcal","protein","carbs","fat"].forEach((k,i)=>$( ["calTotal","proteinTotal","carbsTotal","fatTotal"][i]).textContent=Math.round(t[k]));$("calTarget").textContent=Math.round(user().target);$("calPercent").textContent=p+"%";$("calBar").style.width=p+"%";$("remainingText").textContent=t.kcal<=user().target?Math.round(user().target-t.kcal)+" kcal remaining":Math.round(t.kcal-user().target)+" kcal over target";$("planKcalBadge").textContent=`Week ${week} • ${Math.round(pk)} planned kcal`;
+  const hs=healthScore(),ha=user().age!=null&&hs.logged>0?user().age-Math.round((hs.score-6)*1.5):null;
+  $("healthCard").innerHTML=`<div class="health-ring" style="--p:${Math.round(hs.score*10)}%"><div class="health-ring-in"><b>${hs.score.toFixed(1)}</b><small>/10</small></div></div><div class="health-detail"><div class="health-head"><h3>7-Day Health</h3><span class="tag">${scoreLabel(hs.score)}</span></div><div class="health-bars"><div class="hrow"><span>Consistency</span><div class="hbar"><i style="width:${Math.round(hs.consistency*100)}%"></i></div><b>${hs.logged}/${hs.days}</b></div><div class="hrow"><span>Calories</span><div class="hbar"><i style="width:${Math.round(hs.calorie*100)}%"></i></div><b>${Math.round(hs.calorie*100)}%</b></div><div class="hrow"><span>Protein</span><div class="hbar"><i style="width:${Math.round(hs.protein*100)}%"></i></div><b>${Math.round(hs.protein*100)}%</b></div></div><p class="muted health-age">${ha!=null?`<b>Health age ~${ha}</b> — estimated from your 7-day data, not medical advice.`:user().age!=null?"Health age needs at least 7 days of logs.":"Set your age in Settings to see your health age."}</p><ul class="health-fb">${hs.fb.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;
@@ -156,8 +180,8 @@ $("openCatalogForm").onclick=()=>{
 $("openWeightForm").onclick=weightForm;
 function weightForm(){openModal(`<h2>Log weight for ${esc(user().name)}</h2><form id="wf"><label>Date<input name="date" type="date" value="${today()}" required></label><label>Weight (kg)<input name="weight" type="number" min="1" step=".1" required></label><button class="primary">Save</button></form>`);$("wf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);user().weights=user().weights.filter(x=>x.date!==f.get("date"));const w=n(f.get("weight"));user().weights.push({date:f.get("date"),weight:w});queueSave(`Log weight ${w}kg for ${user().name}`);closeModal();renderAll();toast("✓ Weight saved")}}
 function progress(){renderUserSwitch();const w=[...user().weights].sort((a,b)=>a.date.localeCompare(b.date)),cur=w.at(-1)?.weight,first=w[0]?.weight;$("currentWeight").textContent=cur??"—";$("goalWeight").textContent=user().goal??"—";$("weightChange").textContent=cur!=null&&first!=null?(cur-first).toFixed(1):"—";const r=w.filter(x=>Date.now()-new Date(x.date).getTime()<=604800000);$("avgWeight").textContent=r.length?(r.reduce((a,x)=>a+x.weight,0)/r.length).toFixed(1):"—";const max=Math.max(...w.map(x=>x.weight),1),min=Math.min(...w.map(x=>x.weight),max);$("weightChart").innerHTML=w.length?w.slice(-14).map(x=>`<div class="bar-wrap"><div class="bar" title="${x.date}: ${x.weight} kg" style="height:${max===min?55:15+(x.weight-min)/(max-min)*70}%"></div><div class="bar-label">${x.date.slice(5)}</div></div>`).join(""):"<p class=\"muted\">Log your first weight.</p>";$("weightList").innerHTML=w.slice().reverse().map(x=>`<div class="list-item"><span>${x.date}</span><b>${x.weight} kg</b></div>`).join("")||'<p class="muted">No weigh-ins.</p>'}
-function settings(){renderUserSwitch();$("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("passwordInput").value=password}
-$("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
+function settings(){renderUserSwitch();$("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("passwordInput").value=password}
+$("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
 $("restoreBackup").onclick=async()=>{if(!confirm("Restore your last backed-up edits? This overwrites the current data."))return;try{const b=JSON.parse(localStorage.getItem(KEY+"_backup")||"null");if(!b?.users){toast("No backup found",false);return}state=b;migrate();localSave();queueSave("Restore last backup");renderAll();toast("✓ Backup restored")}catch(e){toast("Could not restore backup",false)}};
 $("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().logs={};user().weights=[];user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};

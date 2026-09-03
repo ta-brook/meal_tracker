@@ -10,6 +10,7 @@ def empty_user(name, gender="male"):
         "gender": gender,
         "target": 2000 if gender == "male" else 1600,
         "goal": None,
+        "age": None,
         "meals": [],
         "logs": {},
         "weights": [],
@@ -49,6 +50,15 @@ def normalize_user(user, fallback):
         user["goal"] = None
     else:
         user["goal"] = _num(goal) or None
+
+    age = user.get("age")
+    if age in (None, ""):
+        user["age"] = None
+    else:
+        try:
+            user["age"] = max(1, int(age))
+        except (TypeError, ValueError):
+            user["age"] = None
 
     meals = user.get("meals")
     if not isinstance(meals, list):
@@ -125,18 +135,3 @@ def read_users():
     book, _ = read_user("book")
     jingjing, _ = read_user("jingjing")
     return {"book": book, "jingjing": jingjing}
-
-
-def write_user(uid, user, sha=None, message=None):
-    """Write one user. In GitHub mode this creates a commit; message is the commit message."""
-    relative_path = config.USER_FILES[uid]
-    user = normalize_user(user, default_users()[uid])
-    if config.persistent():
-        content = json.dumps(user, ensure_ascii=False, indent=2)
-        msg = message or f"Update {user.get('name', uid)} meal tracker data"
-        github.put_contents(relative_path, content, sha, msg)
-        return
-    local_path = os.path.join(config.DATA_ROOT, relative_path)
-    os.makedirs(os.path.dirname(local_path), exist_ok=True)
-    with open(local_path, "w", encoding="utf-8") as f:
-        json.dump(user, f, ensure_ascii=False, indent=2)

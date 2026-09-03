@@ -9,6 +9,7 @@ A simple Flask application for Vercel with two profiles: **BOok** and **jingjing
 - Planned meals come from the editable catalog at `data/meals.csv` (read at runtime) with a regenerated Excel copy at `data/meals.xlsx`.
 - **Saves are batched**: changes are applied locally immediately and flushed to GitHub once, 30 seconds after the last click (not on every click), with descriptive commit messages.
 - **Robust storage**: user data is validated/coerced server-side, and all changed files are written in a single atomic commit via the GitHub Git Data API (all-or-nothing). On a conflict the app retries once, then keeps a local backup.
+- **7-Day Health score + Health Age**: a rule-based 0–10 weekly score (consistency, calorie adherence, protein floor) with short feedback, plus an estimated "health age" (set your age in Profile & Settings). No AI, no API keys.
 - Pastel "sage + cream + peach" UI (tokens in `.interface-design/system.md`).
 
 ## GitHub storage

@@ -88,6 +88,24 @@ h1,h2,h3{text-wrap:balance}
 
 /* Cards & lists */
 .card{background:var(--surface);border-radius:var(--r-md);padding:20px;box-shadow:var(--shadow-sm)}
+
+/* Health card */
+.health-card{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.health-ring{--p:0%;flex:0 0 auto;width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--primary) var(--p),var(--surface-tint) 0);display:flex;align-items:center;justify-content:center}
+.health-ring-in{width:82px;height:82px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
+.health-ring-in b{font-size:24px;color:var(--primary-deep);font-variant-numeric:tabular-nums;line-height:1}
+.health-ring-in small{font-size:11px;color:var(--muted);margin-top:2px}
+.health-detail{flex:1 1 280px;min-width:240px}
+.health-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.health-head h3{margin:0;font-size:17px;font-weight:800;color:var(--text)}
+.health-bars{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.hrow{display:grid;grid-template-columns:92px 1fr 46px;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.hrow b{text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.hbar{height:8px;background:var(--surface-tint);border-radius:999px;overflow:hidden}
+.hbar i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--peach-deep));border-radius:999px}
+.health-age{margin:6px 0}
+.health-fb{margin:6px 0 0;padding-left:18px;color:var(--text);font-size:14px}
+.health-fb li{margin:2px 0}
 .card-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .card-title h3{margin:0;font-size:17px;font-weight:800;color:var(--text)}
 .muted{color:var(--muted)}
