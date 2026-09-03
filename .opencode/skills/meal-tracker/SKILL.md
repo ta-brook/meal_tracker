@@ -1,6 +1,6 @@
 ---
 name: meal-tracker
-description: Use when working on the Meal Tracker app — a Flask/Vercel meal-logging app for two users (BOok and jingjing). Covers the modular Flask backend in api/ (config, github, state, catalog, index), the vanilla-JS frontend in static/app.js and templates/index.html, the two-user GitHub-backed state files (data/book/state.json, data/jingjing/state.json), the editable meal catalog (data/meals.csv + regenerated data/meals.xlsx), and GitHub persistence via the Contents API. Trigger on any task involving meal tracking, state.json, meals.csv, API endpoints, debounced saves, commit messages, profile switching, or deploy/config changes.
+description: Use when working on the Meal Tracker app — a Flask/Vercel meal-logging app for two users (BOok and jingjing). Covers the modular Flask backend in api/ (config, github, state, catalog, index), the vanilla-JS frontend in static/app.js and templates/index.html, the two-user GitHub-backed state files (book/state.json, jingjing/state.json at repo root; data/ copies are the local fallback), the editable meal catalog (data/meals.csv + regenerated data/meals.xlsx), and GitHub persistence via the Contents API. Trigger on any task involving meal tracking, state.json, meals.csv, API endpoints, debounced saves, commit messages, profile switching, or deploy/config changes.
 ---
 
 # Meal Tracker v4
@@ -20,7 +20,8 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
 - `static/style.css` — styling.
 - `data/meals.csv` — meal catalog source of truth (read at runtime by the API).
 - `data/meals.xlsx` — spreadsheet copy, regenerated server-side on every catalog write (needs `openpyxl`).
-- `data/book/state.json`, `data/jingjing/state.json` — per-user state, git-committed fallback and GitHub-backed in production.
+- `book/state.json`, `jingjing/state.json` — per-user state **on GitHub** (the Contents API writes use these repo-root paths via `USER_FILES`).
+- `data/book/state.json`, `data/jingjing/state.json` — local fallback copies, used only when GitHub isn't configured (not the GitHub storage location).
 - `vercel.json` — Vercel v2 config routing everything to `api/index.py`.
 - `requirements.txt` — `Flask==3.1.0`, `openpyxl==3.1.5`.
 - `.github/workflows/validate.yml` — compiles the `api/` package and JSON-validates both per-user state files.
@@ -52,7 +53,7 @@ The backend normalizes both users on every read/write (`normalize_user`/`normali
 ## Backend conventions (`api/`)
 
 - Env vars: `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_BRANCH` (default `main`), `APP_PASSWORD` (optional). Read in `api/config.py`.
-- `USER_FILES` maps `"book"`/`"jingjing"` to their fixed relative paths — do not make this configurable per README.
+- `USER_FILES` maps `"book"`/`"jingjing"` to their fixed relative paths — do not make this configurable per README. **On GitHub these resolve to repo-root `book/state.json` and `jingjing/state.json`; `data/` is only prepended for local-file fallback.**
 - GitHub persistence uses the Contents API via `api/github.py` (`gh()`, `get_contents()`, `put_contents()`). State writes are per-user: each `PUT`/`POST /api/state` reads each user's sha then writes each file separately (2 commits per save). On 409 the API returns "Data changed elsewhere. Reload and try again."
 - `PUT /api/state` also accepts `POST` (used by the frontend's `navigator.sendBeacon` flush on page close) and an optional `message` body field used verbatim as the GitHub commit message for both users.
 - Without GitHub vars, writes fall back to local files under `data/` (durable only locally, not on Vercel serverless).
