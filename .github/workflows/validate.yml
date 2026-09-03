@@ -12,4 +12,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m compileall -q api
-      - run: python -c "import json; [json.load(open(p, encoding='utf-8')) for p in ('data/book/state.json', 'data/jingjing/state.json')]"
+      - run: python -c "import json; [json.load(open(p, encoding='utf-8')) for p in ('data/book/state.json', 'data/jingjing/state.json', 'data/meals.json')]"

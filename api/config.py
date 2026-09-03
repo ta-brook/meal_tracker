@@ -12,6 +12,11 @@ USER_FILES = {
     "jingjing": "jingjing/state.json",
 }
 
+# Shared custom-meal library (app-wide, not per user). Repo-root on GitHub,
+# data/ for the local fallback.
+MEALS_FILE = "meals.json"
+MEALS_LOCAL = os.path.join(DATA_ROOT, "meals.json")
+
 CATALOG_CSV = os.path.join(DATA_ROOT, "meals.csv")
 CATALOG_XLSX = os.path.join(DATA_ROOT, "meals.xlsx")
 CATALOG_HEADERS = ["week", "meal", "meal_name", "gender", "kcal", "protein_g", "carbs_g", "fat_g", "ingredients", "method"]

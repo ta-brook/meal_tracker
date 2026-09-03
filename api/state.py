@@ -23,10 +23,69 @@ def default_users():
     }
 
 
+def _num(v, default=0.0):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
 def normalize_user(user, fallback):
+    """Coerce a raw user dict into the guaranteed schema. Never raises."""
     user = dict(user or {})
-    for k, v in fallback.items():
-        user.setdefault(k, v)
+    name = user.get("name")
+    user["name"] = str(name).strip() if name else fallback["name"]
+
+    if user.get("gender") not in ("male", "female"):
+        user["gender"] = fallback["gender"]
+
+    try:
+        user["target"] = max(0, int(user.get("target", fallback["target"])))
+    except (TypeError, ValueError):
+        user["target"] = fallback["target"]
+
+    goal = user.get("goal")
+    if goal in (None, ""):
+        user["goal"] = None
+    else:
+        user["goal"] = _num(goal) or None
+
+    meals = user.get("meals")
+    if not isinstance(meals, list):
+        meals = []
+    user["meals"] = []
+    for m in meals:
+        if not isinstance(m, dict) or not m.get("id") or not m.get("name"):
+            continue
+        user["meals"].append({
+            "id": str(m["id"]),
+            "name": str(m["name"]),
+            "kcal": _num(m.get("kcal")),
+            "protein": _num(m.get("protein")),
+            "carbs": _num(m.get("carbs")),
+            "fat": _num(m.get("fat")),
+        })
+
+    logs = user.get("logs")
+    if not isinstance(logs, dict):
+        logs = {}
+    user["logs"] = {}
+    for date, ids in logs.items():
+        if isinstance(ids, list):
+            user["logs"][str(date)] = [str(i) for i in ids if i is not None]
+
+    weights = user.get("weights")
+    if not isinstance(weights, list):
+        weights = []
+    user["weights"] = []
+    for w in weights:
+        if not isinstance(w, dict) or not w.get("date") or w.get("weight") in (None, ""):
+            continue
+        try:
+            user["weights"].append({"date": str(w["date"]), "weight": float(w["weight"])})
+        except (TypeError, ValueError):
+            continue
+
     return user
 
 

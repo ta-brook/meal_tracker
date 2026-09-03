@@ -1,7 +1,7 @@
 let CATALOG = [];
 const KEY = "mealTrackerV4";
 const EMPTY = {name:"",gender:"male",target:2000,goal:null,meals:[],logs:{},weights:[]};
-let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}}};
+let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],active_user:"book"};
 let week = 1, password = sessionStorage.getItem("mealTrackerPassword") || "", persistent = false, auth = false;
 const $ = id => document.getElementById(id);
 const user = () => state.users[state.active_user || "book"];
@@ -16,15 +16,29 @@ function toast(text, ok=true){
   t.className=ok?"toast ok":"toast warn";t.textContent=text;t.classList.add("show");clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove("show"),2200);
 }
 function localSave(){ localStorage.setItem(KEY, JSON.stringify(state)); }
-function localLoad(){ try{const x=JSON.parse(localStorage.getItem(KEY)||"null");if(x?.users) state=x;}catch(e){} }
+function localLoad(){ try{const x=JSON.parse(localStorage.getItem(KEY)||"null");if(x?.users){state=x;state.meals||=[]}}catch(e){} }
 function migrate(){
   state.users ||= {};
+  state.meals ||= [];
   if(state.users.me && !state.users.book){state.users.book=state.users.me;delete state.users.me}
   if(state.users.gf && !state.users.jingjing){state.users.jingjing=state.users.gf;delete state.users.gf}
   state.users.book ||= {...EMPTY,name:"BOok",gender:"male",target:2000};
   state.users.jingjing ||= {...EMPTY,name:"jingjing",gender:"female",target:1600};
   state.users.book.name ||= "BOok"; state.users.jingjing.name ||= "jingjing";
   state.active_user ||= "book";
+}
+function migrateSharedMeals(){
+  let merged=false;
+  const seen=new Set(state.meals.map(m=>m.id));
+  for(const k of ["book","jingjing"]){
+    const u=state.users[k]; if(!u) continue;
+    for(const m of (u.meals||[])){
+      if(!m||!m.id||seen.has(m.id)) continue;
+      seen.add(m.id); state.meals.push(m); merged=true;
+    }
+    u.meals=[];
+  }
+  return merged;
 }
 async function api(path, options={}){
   options.headers={...(options.headers||{}),...(password?{"X-App-Password":password}:{})};
@@ -34,8 +48,9 @@ async function api(path, options={}){
 async function loadCatalog(){try{CATALOG=await api("/api/meal-catalog")}catch(e){CATALOG=[]}}
 async function loadCloud(){
   const c=await api("/api/config"); auth=c.auth;persistent=c.persistent;
-  const s=await api("/api/state"); state.users=s.users; migrate(); localSave();
+  const s=await api("/api/state"); state.users=s.users; state.meals=s.meals||[]; migrate(); localSave();
   pendingMessages=[]; if(debounceTimer){clearTimeout(debounceTimer);debounceTimer=null}
+  if(migrateSharedMeals()){ localSave(); queueSave("Migrate custom meals to shared library"); toast("Custom meals moved to the shared library"); }
   await loadCatalog();
   setBanner(persistent?"☁️ <b>Cloud persistence ON</b> — saves are batched every 30s.":"💾 <b>Local mode</b> — add GitHub environment variables for durable cloud storage.","ok");
 }
@@ -53,16 +68,21 @@ async function flushSave(){
   if(!persistent || pendingMessages.length===0) return;
   const msgs = pendingMessages; pendingMessages = [];
   const message = [...new Set(msgs)].join("; ").slice(0, 200);
+  const body = () => JSON.stringify({users:state.users,meals:state.meals,message});
   try{
-    await api("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({users:state.users,message})});
+    await api("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:body()});
   }catch(e){
-    pendingMessages = msgs.concat(pendingMessages);
     if(e.message.includes("Data changed elsewhere")){
-      setBanner("⚠️ Data changed elsewhere — reloading latest from server.","warn");
+      let recovered=false;
+      try{await api("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:body()});recovered=true}catch(_){}
+      if(recovered) return;
+      try{localStorage.setItem(KEY+"_backup",JSON.stringify(state))}catch(_){}
+      setBanner("⚠️ Conflict — loaded latest from server. Your recent edits were backed up.","warn");
       try{await loadCloud()}catch(_){}
       renderAll();
       return;
     }
+    pendingMessages = msgs.concat(pendingMessages);
     setBanner("⚠️ Save failed — will retry in 30s.","warn");
     debounceTimer = setTimeout(flushSave, SAVE_DELAY_MS);
   }
@@ -71,11 +91,11 @@ window.addEventListener("pagehide",()=>{
   if(!persistent || pendingMessages.length===0) return;
   const message = [...new Set(pendingMessages)].join("; ").slice(0, 200);
   const headers={"Content-Type":"application/json"}; if(password) headers["X-App-Password"]=password;
-  fetch("/api/state",{method:"POST",keepalive:true,headers,body:JSON.stringify({users:state.users,message})});
+  fetch("/api/state",{method:"POST",keepalive:true,headers,body:JSON.stringify({users:state.users,meals:state.meals,message})});
 });
 function logs(d){return user().logs[d]||[]}
 function findMeal(id){
-  const m=user().meals.find(x=>x.id===id); if(m) return m;
+  const m=state.meals.find(x=>x.id===id); if(m) return m;
   const p=/^plan-(\d+)-(\d+)-(male|female)$/.exec(id); if(!p) return null;
   const row=CATALOG.find(x=>n(x.week)===n(p[1])&&n(x.meal)===n(p[2])&&x.gender===p[3]);
   return row ? {id,name:row.meal_name,kcal:n(row.kcal),protein:n(row.protein_g),carbs:n(row.carbs_g),fat:n(row.fat_g),planned:true,week:n(row.week),slot:n(row.meal),ingredients:row.ingredients,method:row.method} : null;
@@ -102,7 +122,7 @@ function dashboard(){
 }
 function meals(){
   renderUserSwitch();const d=$("datePicker").value||today();
-  $("mealLibrary").innerHTML=user().meals.map(m=>{const logged=logs(d).includes(m.id);return `<article class="meal-card"><h3>${esc(m.name)}</h3><span class="tag">Custom</span><p><b>${m.kcal} kcal</b><br>P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</p><div class="actions"><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log today"}</button><button class="danger" onclick="deleteMeal('${m.id}')">Delete</button></div></article>`}).join("")||'<div class="card"><p class="muted">No custom meals yet.</p></div>';
+  $("mealLibrary").innerHTML=state.meals.map(m=>{const logged=logs(d).includes(m.id);return `<article class="meal-card"><h3>${esc(m.name)}</h3><span class="tag">Custom</span><p><b>${m.kcal} kcal</b><br>P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</p><div class="actions"><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log today"}</button><button class="danger" onclick="deleteMeal('${m.id}')">Delete</button></div></article>`}).join("")||'<div class="card"><p class="muted">No custom meals yet. Add one above — it will be shared across the whole app.</p></div>';
   const uniq={};CATALOG.forEach(r=>{if(r?.meal_name&&!uniq[r.meal_name])uniq[r.meal_name]=r});
   window.__catNames=Object.keys(uniq);
   $("catalogLibrary").innerHTML=window.__catNames.map((name,i)=>{const row=CATALOG.find(x=>x.meal_name===name&&x.gender===user().gender)||uniq[name];const id=`plan-${n(row.week)}-${n(row.meal)}-${row.gender}`;const logged=logs(d).includes(id);return `<article class="meal-card"><h3>${esc(name)}</h3><span class="tag">Week ${n(row.week)} • Meal ${n(row.meal)}</span><p><b>${n(row.kcal)} kcal</b><br>P ${n(row.protein_g)}g • C ${n(row.carbs_g)}g • F ${n(row.fat_g)}g</p><div class="actions"><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${id}')">${logged?"✓ Logged today":"+ Add"}</button><button class="danger" onclick="deleteCatalogMeal(${i})">Delete</button></div></article>`}).join("")||'<div class="card"><p class="muted">No catalog meals yet. Add one above.</p></div>';
@@ -112,9 +132,9 @@ function planView(){
 $("genderSelect").onchange=async e=>{user().gender=e.target.value;queueSave(`Change quantity profile for ${user().name}`);planView();dashboard();toast("Quantity profile updated")};
 async function logMeal(id){const d=$("datePicker").value||today();user().logs[d] ||= [];if(user().logs[d].includes(id)){toast("Already logged today",false);return}user().logs[d].push(id);const m=findMeal(id);queueSave(m?`Log meal "${m.name}" for ${user().name}`:`Log meal ${id} for ${user().name}`);renderAll();toast(`✓ ${m?.name||"Meal"} logged for ${user().name}`)}
 async function removeLog(id){const d=$("datePicker").value||today();user().logs[d]=(user().logs[d]||[]).filter(x=>x!==id);queueSave(`Remove logged meal for ${user().name}`);renderAll();toast("Meal removed")}
-function mealForm(quick=false){openModal(`<h2>Add meal for ${esc(user().name)}</h2><form id="mf"><label>Meal name<input name="name" required placeholder="Chicken rice"></label><div class="form-grid"><label>kcal<input name="kcal" type="number" min="0" required></label><label>Protein (g)<input name="protein" type="number" min="0" step=".1" value="0"></label><label>Carbs (g)<input name="carbs" type="number" min="0" step=".1" value="0"></label><label>Fat (g)<input name="fat" type="number" min="0" step=".1" value="0"></label></div><button class="primary">Save meal</button></form>`);$("mf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id="custom-"+crypto.randomUUID(),meal={id,name:f.get("name"),kcal:n(f.get("kcal")),protein:n(f.get("protein")),carbs:n(f.get("carbs")),fat:n(f.get("fat"))};user().meals.push(meal);queueSave(`Add custom meal "${meal.name}"`);closeModal();renderAll();toast("✓ Meal saved");if(quick)await logMeal(id)}}
+function mealForm(quick=false){openModal(`<h2>Add meal to shared library</h2><form id="mf"><label>Meal name<input name="name" required placeholder="Chicken rice"></label><div class="form-grid"><label>kcal<input name="kcal" type="number" min="0" required></label><label>Protein (g)<input name="protein" type="number" min="0" step=".1" value="0"></label><label>Carbs (g)<input name="carbs" type="number" min="0" step=".1" value="0"></label><label>Fat (g)<input name="fat" type="number" min="0" step=".1" value="0"></label></div><button class="primary">Save meal</button></form>`);$("mf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id="custom-"+crypto.randomUUID(),meal={id,name:f.get("name"),kcal:n(f.get("kcal")),protein:n(f.get("protein")),carbs:n(f.get("carbs")),fat:n(f.get("fat"))};state.meals.push(meal);queueSave(`Add meal "${meal.name}"`);closeModal();renderAll();toast("✓ Meal saved");if(quick)await logMeal(id)}}
 $("openMealForm").onclick=()=>mealForm();$("quickAdd").onclick=()=>mealForm(true);
-async function deleteMeal(id){if(!confirm("Delete this meal?"))return;const m=findMeal(id);user().meals=user().meals.filter(x=>x.id!==id);Object.keys(user().logs).forEach(d=>user().logs[d]=(user().logs[d]||[]).filter(x=>x!==id));queueSave(m?`Delete custom meal "${m.name}"`:`Delete custom meal for ${user().name}`);renderAll();toast("Meal deleted")}
+async function deleteMeal(id){if(!confirm("Delete this meal? It is shared and will be removed for both profiles."))return;const m=findMeal(id);state.meals=state.meals.filter(x=>x.id!==id);for(const k of ["book","jingjing"]){const u=state.users[k];if(!u)continue;Object.keys(u.logs).forEach(d=>u.logs[d]=(u.logs[d]||[]).filter(x=>x!==id));}queueSave(m?`Delete meal "${m.name}"`:`Delete meal ${id}`);renderAll();toast("Meal deleted")}
 async function refreshCatalog(){try{CATALOG=await api("/api/meal-catalog")}catch(e){CATALOG=[]}}
 async function deleteCatalogMeal(i){
   const name=window.__catNames?.[i];if(!name)return;
@@ -139,7 +159,8 @@ function progress(){renderUserSwitch();const w=[...user().weights].sort((a,b)=>a
 function settings(){renderUserSwitch();$("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("passwordInput").value=password}
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
-$("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().meals=[];user().logs={};user().weights=[];user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
+$("restoreBackup").onclick=async()=>{if(!confirm("Restore your last backed-up edits? This overwrites the current data."))return;try{const b=JSON.parse(localStorage.getItem(KEY+"_backup")||"null");if(!b?.users){toast("No backup found",false);return}state=b;migrate();localSave();queueSave("Restore last backup");renderAll();toast("✓ Backup restored")}catch(e){toast("Could not restore backup",false)}};
+$("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().logs={};user().weights=[];user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
 function openModal(h){$("modalBody").innerHTML=h;$("modal").classList.remove("hidden")}function closeModal(){$("modal").classList.add("hidden")}$("closeModal").onclick=closeModal;$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
 $("exportCsv").onclick=()=>window.location.href="/download/meals.csv";$("exportXlsx").onclick=()=>window.location.href="/download/meals.xlsx";
 function renderAll(){renderUserSwitch();dashboard();meals();planView();progress();settings()}

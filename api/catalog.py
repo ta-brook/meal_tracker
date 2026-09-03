@@ -29,21 +29,15 @@ def catalog_source():
     return catalog_rows(), None
 
 
-def write_catalog_source(rows, sha, message="Update meal catalog"):
+def _csv_text(rows):
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=config.CATALOG_HEADERS)
     writer.writeheader()
     writer.writerows(rows)
-    text = buf.getvalue()
-    if config.persistent():
-        github.put_contents("data/meals.csv", text, sha, message)
-    else:
-        with open(config.CATALOG_CSV, "w", encoding="utf-8-sig", newline="") as f:
-            f.write(text)
+    return buf.getvalue()
 
 
-def write_catalog_xlsx(rows):
-    """Regenerate meals.xlsx from the rows (keeps the spreadsheet download in sync)."""
+def _xlsx_bytes(rows):
     wb = Workbook()
     ws = wb.active
     ws.title = "meals"
@@ -52,13 +46,20 @@ def write_catalog_xlsx(rows):
         ws.append([row.get(h, "") for h in config.CATALOG_HEADERS])
     buf = io.BytesIO()
     wb.save(buf)
-    payload = buf.getvalue()
+    return buf.getvalue()
+
+
+def write_catalog(rows, message="Update meal catalog"):
+    """Persist rows as CSV + XLSX atomically (single commit on GitHub)."""
+    csv_text = _csv_text(rows)
+    xlsx_bytes = _xlsx_bytes(rows)
     if config.persistent():
-        _, sha = github.get_contents_or_none("data/meals.xlsx", binary=True)
-        github.put_contents("data/meals.xlsx", payload, sha, "Update meal catalog (xlsx)", binary=True)
+        github.commit_files({"data/meals.csv": csv_text, "data/meals.xlsx": xlsx_bytes}, message)
     else:
+        with open(config.CATALOG_CSV, "w", encoding="utf-8-sig", newline="") as f:
+            f.write(csv_text)
         with open(config.CATALOG_XLSX, "wb") as f:
-            f.write(payload)
+            f.write(xlsx_bytes)
 
 
 def normalize_catalog_row(row):
