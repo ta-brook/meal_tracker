@@ -109,3 +109,13 @@ module or endpoint, navigation change), update **both**:
 
 Do not leave docs describing a stale architecture. When in doubt, point future
 work at `state.md` first.
+
+## Session continuity
+
+At the end of every session, save the current session id to `SESSION.md` (repo
+root) so the next session resumes cleanly:
+
+1. The session id is the value printed when starting opencode with `-s`
+   (e.g. `ses_...`).
+2. Write it into `SESSION.md` first line: `opencode -s <session-id>`.
+3. Commit and push `SESSION.md` along with any other final changes.
