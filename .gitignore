@@ -1,3 +1,5 @@
 credentials/*
 credentials
 app-password
+__pycache__/
+*.pyc

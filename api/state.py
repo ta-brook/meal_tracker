@@ -11,9 +11,14 @@ def empty_user(name, gender="male"):
         "target": 2000 if gender == "male" else 1600,
         "goal": None,
         "age": None,
+        "height": None,
+        "protein_goal": None,
+        "carbs_goal": None,
+        "fat_goal": None,
         "meals": [],
         "logs": {},
         "weights": [],
+        "water": {},
     }
 
 
@@ -60,6 +65,25 @@ def normalize_user(user, fallback):
         except (TypeError, ValueError):
             user["age"] = None
 
+    height = user.get("height")
+    if height in (None, ""):
+        user["height"] = None
+    else:
+        try:
+            user["height"] = min(250, max(1, int(height)))
+        except (TypeError, ValueError):
+            user["height"] = None
+
+    for key in ("protein_goal", "carbs_goal", "fat_goal"):
+        value = user.get(key)
+        if value in (None, ""):
+            user[key] = None
+        else:
+            try:
+                user[key] = max(0, int(value))
+            except (TypeError, ValueError):
+                user[key] = None
+
     meals = user.get("meals")
     if not isinstance(meals, list):
         meals = []
@@ -93,6 +117,16 @@ def normalize_user(user, fallback):
             continue
         try:
             user["weights"].append({"date": str(w["date"]), "weight": float(w["weight"])})
+        except (TypeError, ValueError):
+            continue
+
+    water = user.get("water")
+    if not isinstance(water, dict):
+        water = {}
+    user["water"] = {}
+    for date, count in water.items():
+        try:
+            user["water"][str(date)] = max(0, int(count))
         except (TypeError, ValueError):
             continue
 

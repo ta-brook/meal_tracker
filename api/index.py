@@ -1,7 +1,7 @@
 import json
 import urllib.error
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
 
 from api import catalog, config, github, meals, state
 
@@ -19,6 +19,16 @@ def _conflict():
 @app.get("/")
 def home():
     return render_template("index.html")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return send_from_directory(config.ROOT, "sw.js", mimetype="application/javascript")
+
+
+@app.get("/manifest.json")
+def web_manifest():
+    return send_from_directory(config.ROOT, "manifest.json", mimetype="application/manifest+json")
 
 
 @app.get("/api/config")
@@ -140,6 +150,40 @@ def delete_meal_catalog():
     try:
         catalog.write_catalog(current, message)
         return jsonify(ok=True, removed=removed)
+    except RuntimeError as e:
+        if str(e) == "CONFLICT":
+            return _conflict()
+        return jsonify(error="Catalog save failed"), 500
+    except urllib.error.HTTPError as e:
+        if e.code == 409:
+            return _conflict()
+        return jsonify(error="Catalog save failed"), 500
+    except Exception:
+        return jsonify(error="Catalog save failed"), 500
+
+
+@app.put("/api/meal-catalog")
+def update_meal_catalog():
+    if not check_password():
+        return jsonify(error="Unauthorized"), 401
+    body = request.get_json(force=True) or {}
+    name = str(body.get("meal_name", "")).strip()
+    rows = body.get("rows")
+    if not name:
+        return jsonify(error="meal_name is required"), 400
+    if not isinstance(rows, list) or not rows:
+        return jsonify(error="rows array is required"), 400
+    try:
+        new_rows = [catalog.normalize_catalog_row(r) for r in rows]
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    current, _ = catalog.catalog_source()
+    current = [r for r in current if str(r.get("meal_name", "")).strip() != name]
+    current.extend(new_rows)
+    message = f'Update meal "{name}" in catalog'
+    try:
+        catalog.write_catalog(current, message)
+        return jsonify(ok=True, updated=len(new_rows))
     except RuntimeError as e:
         if str(e) == "CONFLICT":
             return _conflict()

@@ -6,6 +6,7 @@ GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 USER_FILES = {
     "book": "book/state.json",

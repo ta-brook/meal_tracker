@@ -31,6 +31,13 @@ Pastel, calm, kitchen-fresh UI for a two-person meal-logging app. Direction conf
 | `--danger` / deep | `#F3C9C3` / `#A94F3B` | delete, clear |
 | shadows | `--shadow-sm`/`--shadow`/`--shadow-lg` | layered soft, no hard borders for elevation |
 
+## Dark mode
+
+`[data-theme="dark"]` in `static/style.css` overrides the same token variables
+(sage-gray canvas, darker cream surfaces, light sage ink), so every component
+flips automatically. Selection via Settings → Appearance (Auto / Light / Dark),
+defaulting to the system `prefers-color-scheme`; choice stored in localStorage.
+
 ## Decisions
 
 - **Depth strategy:** subtle layered shadows for elevation; real borders only on inputs + dividers (`--border`). Never harsh borders.
