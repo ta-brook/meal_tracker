@@ -38,6 +38,16 @@ Pastel, calm, kitchen-fresh UI for a two-person meal-logging app. Direction conf
 flips automatically. Selection via Settings → Appearance (Auto / Light / Dark),
 defaulting to the system `prefers-color-scheme`; choice stored in localStorage.
 
+## Today's plate (dashboard signature)
+
+"Today's plate" fills with a food emoji per logged meal — your plate reflects
+your day. `--p` conic ring around it shows calorie % of target (reuses
+`--primary`/`--surface-tint`). Motion: emojis pop in `foodPop` (0.3s,
+`cubic-bezier(.23,1,.32,1)`, stagger 60ms, only when the meal count changes);
+the ring gently floats `plateFloat` (4.5s ease-in-out) while food is present.
+All motion dies under `prefers-reduced-motion`. Sizes: ring 150 / inner plate
+118 (`outer = inner + 32`).
+
 ## Decisions
 
 - **Depth strategy:** subtle layered shadows for elevation; real borders only on inputs + dividers (`--border`). Never harsh borders.

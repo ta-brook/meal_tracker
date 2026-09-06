@@ -1,4 +1,5 @@
 let CATALOG = [], mealQuery = "", PRICES = {updated:null,items:[]};
+const THEME_ICON = {auto:"🌓",light:"☀️",dark:"🌙"};
 const KEY = "mealTrackerV4";
 const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{}};
 let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],active_user:"book"};
@@ -152,7 +153,10 @@ function copyLastDay(){
   queueSave(`Copy meals from ${prev}`);renderAll();toast(`✓ Copied ${added.length} meal${added.length===1?"":"s"} from ${prev.slice(5)}`);
 }
 $("copyDayBtn").onclick=copyLastDay;
-function tab(x){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="progress")progress();if(x==="settings")settings()}
+function tab(x){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="progress")progress();if(x==="settings")settings();history.replaceState(null,"","#"+x)}
+const TABS=["dashboard","meals","plan","prices","progress","settings"];
+function hashTab(){const x=(location.hash||"").replace("#","");if(TABS.includes(x))tab(x)}
+window.addEventListener("hashchange",hashTab);
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
@@ -162,7 +166,17 @@ function dashboard(){
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;const streak=loggingStreak();$("streakTag").textContent=streak>1?`🔥 ${streak}-day streak`:streak===1?"🔥 Logged today":"";
-  macroHtml();renderWater();
+  renderPlate(d,p);macroHtml();renderWater();
+}
+const PLATE_FOOD=["🥗","🍗","🍚","🥩","🍜","🥦","🍤","🍛"];
+function renderPlate(d,p){
+  const ids=logs(d),prev=window.__plateCount||0,animate=prev!==ids.length;window.__plateCount=ids.length;
+  $("plateFood").innerHTML=ids.length?ids.map((id,i)=>`<span class="${animate?"food-pop":""}" style="animation-delay:${i*60}ms">${PLATE_FOOD[i%PLATE_FOOD.length]}</span>`).join(""):"";
+  $("plateEmpty").style.display=ids.length?"none":"";
+  $("platePercent").textContent=Math.round(p)+"% of target";
+  $("plateHint").textContent=ids.length?`${ids.length} meal${ids.length===1?"":"s"} logged`:"Log meals to fill your plate";
+  $("plateRing").classList.toggle("has-food",ids.length>0);
+  $("plateRing").style.setProperty("--p",p+"%");
 }
 function loggingStreak(){let s=0,dt=new Date();for(;;){const ds=dt.toISOString().slice(0,10);if((user().logs[ds]||[]).length){s++;dt.setDate(dt.getDate()-1)}else break}return s}
 function macroHtml(){
@@ -260,7 +274,9 @@ function openModal(h){$("modalBody").innerHTML=h;$("modal").classList.remove("hi
 $("exportCsv").onclick=()=>window.location.href="/download/meals.csv";$("exportXlsx").onclick=()=>window.location.href="/download/meals.xlsx";
 $("exportData").onclick=async()=>{try{const s=await api("/api/state");const blob=new Blob([JSON.stringify(s,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`meal-tracker-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);toast("✓ Backup downloaded")}catch(e){toast(e.message,false)}};
 $("importData").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());if(!parsed?.users){toast("Invalid backup file",false);return}state=parsed;state.meals||=[];migrate();localSave();queueSave("Restore from backup");renderAll();toast("✓ Backup restored")}catch(err){toast("Could not read backup file",false)}e.target.value=""};
-function applyTheme(){const t=localStorage.getItem(KEY+"_theme")||"auto";const dark=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=dark?"dark":"light";const el=$("themeSelect");if(el)el.value=t}
+function applyTheme(){const t=localStorage.getItem(KEY+"_theme")||"auto";const dark=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=dark?"dark":"light";const el=$("themeSelect");if(el)el.value=t;const tb=$("themeToggle");if(tb){tb.textContent=THEME_ICON[t];tb.title=`Theme: ${t} — click to change`}}
+function cycleTheme(){const order=["auto","light","dark"],t=localStorage.getItem(KEY+"_theme")||"auto",next=order[(order.indexOf(t)+1)%order.length];localStorage.setItem(KEY+"_theme",next);applyTheme();toast(next==="auto"?"Theme: auto (system)":next==="light"?"Theme: light":"Theme: dark")}
+$("themeToggle").onclick=cycleTheme;
 $("themeSelect").onchange=()=>{localStorage.setItem(KEY+"_theme",$("themeSelect").value);applyTheme()};
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if((localStorage.getItem(KEY+"_theme")||"auto")==="auto")applyTheme()});
 let deferredPrompt=null;
@@ -298,5 +314,6 @@ async function boot(){
   await loadCatalog();
   await loadPrices();
   renderAll();
+  hashTab();
 }
 boot();

@@ -1,6 +1,7 @@
 const CACHE = "meal-tracker-v1";
 const ASSETS = [
   "/",
+  "/manifest.json",
   "/static/app.js",
   "/static/style.css",
   "/static/icons/icon-192.png",
