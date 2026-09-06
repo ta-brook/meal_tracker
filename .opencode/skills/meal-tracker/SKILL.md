@@ -18,7 +18,7 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
   - `api/catalog.py` — catalog CSV/XLSX read/write (`catalog_source`, `write_catalog`, `normalize_catalog_row`).
   - `api/prices.py` — Makro PRO market prices: `ITEMS` list, `fetch_prices()` (parallel search of `search.maknet.siammakro.cloud`), `read_prices()`, `serialize()`.
   - `api/shared.py` — household shared data: `SHARED_FILES` (shopping/calendar/finance/chores), per-key `read()`/`normalize()`/`serialize()`.
-- `templates/index.html` — single page, **bottom app-nav** (HOME / Food / Chore / Others) + per-group sub-tabs.
+- `templates/index.html` — single page, classic **top tab bar** (`.tabs`) with 11 tabs: Home, Meals, Plan, Prices, Shopping, Chores, Calendar, Mood, Finance, Progress, Settings. A bottom tab bar was tried and reverted.
 - `static/app.js` — vanilla JS state management and rendering; no build step, no framework.
 - `static/style.css` — pastel theme on CSS variables (tokens live in `.interface-design/system.md`).
 - `.interface-design/system.md` — design tokens (sage + cream + peach): palette, radius, spacing, depth, type.
@@ -97,3 +97,15 @@ CI (`.github/workflows/validate.yml`) runs `python -m compileall -q api` and JSO
 ## Deploy
 
 Push to GitHub → import into Vercel → set `GITHUB_TOKEN` (fine-grained, Contents: Read+Write), `GITHUB_REPO`, `GITHUB_BRANCH`, optional `APP_PASSWORD` → deploy. Never commit `credentials/` secrets (`.gitignore` excludes `credentials/`).
+
+## Keep docs in sync
+
+At the end of any significant change (new feature, schema/data change, new
+module or endpoint, navigation change), update **both**:
+
+1. `state.md` (repo root) — the application-state reference: snapshot, layout,
+   data model, features/pages, save & sync, endpoints, conventions, decisions.
+2. This skill file — layout list, data model, endpoints, frontend conventions.
+
+Do not leave docs describing a stale architecture. When in doubt, point future
+work at `state.md` first.
