@@ -18,7 +18,10 @@
   "shortcuts": [
     { "name": "Dashboard", "url": "/", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Meals", "url": "/#meals", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Plan", "url": "/#plan", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Shopping", "url": "/#shopping", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chores", "url": "/#chores", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Calendar", "url": "/#calendar", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Finance", "url": "/#finance", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Prices", "url": "/#prices", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Progress", "url": "/#progress", "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] }
   ]

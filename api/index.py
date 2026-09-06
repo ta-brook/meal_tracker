@@ -3,7 +3,7 @@ import urllib.error
 
 from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
 
-from api import catalog, config, github, meals, prices, state
+from api import catalog, config, github, meals, prices, shared, state
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
@@ -44,7 +44,14 @@ def config_endpoint():
 def get_state():
     if not check_password():
         return jsonify(error="Unauthorized"), 401
-    return jsonify({"users": state.read_users(), "meals": meals.read_meals()[0]})
+    return jsonify({
+        "users": state.read_users(),
+        "meals": meals.read_meals()[0],
+        "shopping": shared.read("shopping"),
+        "calendar": shared.read("calendar"),
+        "finance": shared.read("finance"),
+        "chores": shared.read("chores"),
+    })
 
 
 @app.route("/api/state", methods=["PUT", "POST"])
@@ -72,6 +79,11 @@ def put_state():
         new_meals = meals.serialize(body.get("meals"))
         if github.read_file_text(config.MEALS_FILE) != new_meals:
             changes[config.MEALS_FILE] = new_meals
+    for key in shared.SHARED_FILES:
+        if key in body:
+            new = shared.serialize(key, body.get(key))
+            if github.read_file_text(shared.SHARED_FILES[key]) != new:
+                changes[shared.SHARED_FILES[key]] = new
 
     if not changes:
         return jsonify(ok=True, persistent=config.persistent())

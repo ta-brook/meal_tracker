@@ -19,6 +19,7 @@ def empty_user(name, gender="male"):
         "logs": {},
         "weights": [],
         "water": {},
+        "moods": {},
     }
 
 
@@ -129,6 +130,14 @@ def normalize_user(user, fallback):
             user["water"][str(date)] = max(0, int(count))
         except (TypeError, ValueError):
             continue
+
+    moods = user.get("moods")
+    if not isinstance(moods, dict):
+        moods = {}
+    user["moods"] = {}
+    for date, key in moods.items():
+        if isinstance(key, str) and key:
+            user["moods"][str(date)] = key[:12]
 
     return user
 

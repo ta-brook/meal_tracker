@@ -1,8 +1,8 @@
 let CATALOG = [], mealQuery = "", PRICES = {updated:null,items:[]};
 const THEME_ICON = {auto:"🌓",light:"☀️",dark:"🌙"};
 const KEY = "mealTrackerV4";
-const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{}};
-let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],active_user:"book"};
+const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{},moods:{}};
+let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],shopping:{items:[]},calendar:{events:[]},finance:{transactions:[],budgets:{}},chores:{chores:[]},active_user:"book"};
 let week = 1, password = sessionStorage.getItem("mealTrackerPassword") || "", persistent = false, auth = false;
 const $ = id => document.getElementById(id);
 const user = () => state.users[state.active_user || "book"];
@@ -21,6 +21,7 @@ function localLoad(){ try{const x=JSON.parse(localStorage.getItem(KEY)||"null");
 function migrate(){
   state.users ||= {};
   state.meals ||= [];
+  state.shopping ||= {items:[]}; state.calendar ||= {events:[]}; state.finance ||= {transactions:[],budgets:{}}; state.chores ||= {chores:[]};
   if(state.users.me && !state.users.book){state.users.book=state.users.me;delete state.users.me}
   if(state.users.gf && !state.users.jingjing){state.users.jingjing=state.users.gf;delete state.users.gf}
   state.users.book ||= {...EMPTY,name:"BOok",gender:"male",target:2000};
@@ -30,6 +31,7 @@ function migrate(){
     const u=state.users[k];
     u.height ??= null; u.protein_goal ??= null; u.carbs_goal ??= null; u.fat_goal ??= null;
     u.water ||= {};
+    u.moods ||= {};
   }
   state.active_user ||= "book";
 }
@@ -54,7 +56,7 @@ async function api(path, options={}){
 async function loadCatalog(){try{CATALOG=await api("/api/meal-catalog")}catch(e){CATALOG=[]}}
 async function loadCloud(){
   const c=await api("/api/config"); auth=c.auth;persistent=c.persistent;
-  const s=await api("/api/state"); state.users=s.users; state.meals=s.meals||[]; migrate(); localSave();
+  const s=await api("/api/state"); state.users=s.users; state.meals=s.meals||[]; state.shopping=s.shopping||{items:[]}; state.calendar=s.calendar||{events:[]}; state.finance=s.finance||{transactions:[],budgets:{}}; state.chores=s.chores||{chores:[]}; migrate(); localSave();
   pendingMessages=[]; if(debounceTimer){clearTimeout(debounceTimer);debounceTimer=null}
   if(migrateSharedMeals()){ localSave(); queueSave("Migrate custom meals to shared library"); toast("Custom meals moved to the shared library"); }
   await loadCatalog();
@@ -74,7 +76,7 @@ async function flushSave(){
   if(!persistent || pendingMessages.length===0) return;
   const msgs = pendingMessages; pendingMessages = [];
   const message = [...new Set(msgs)].join("; ").slice(0, 200);
-  const body = () => JSON.stringify({users:state.users,meals:state.meals,message});
+  const body = () => JSON.stringify({users:state.users,meals:state.meals,shopping:state.shopping,calendar:state.calendar,finance:state.finance,chores:state.chores,message});
   try{
     await api("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:body()});
   }catch(e){
@@ -97,7 +99,7 @@ window.addEventListener("pagehide",()=>{
   if(!persistent || pendingMessages.length===0) return;
   const message = [...new Set(pendingMessages)].join("; ").slice(0, 200);
   const headers={"Content-Type":"application/json"}; if(password) headers["X-App-Password"]=password;
-  fetch("/api/state",{method:"POST",keepalive:true,headers,body:JSON.stringify({users:state.users,meals:state.meals,message})});
+  fetch("/api/state",{method:"POST",keepalive:true,headers,body:JSON.stringify({users:state.users,meals:state.meals,shopping:state.shopping,calendar:state.calendar,finance:state.finance,chores:state.chores,message})});
 });
 function logs(d){return user().logs[d]||[]}
 function findMeal(id){
@@ -153,11 +155,27 @@ function copyLastDay(){
   queueSave(`Copy meals from ${prev}`);renderAll();toast(`✓ Copied ${added.length} meal${added.length===1?"":"s"} from ${prev.slice(5)}`);
 }
 $("copyDayBtn").onclick=copyLastDay;
-function tab(x){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="progress")progress();if(x==="settings")settings();history.replaceState(null,"","#"+x)}
-const TABS=["dashboard","meals","plan","prices","progress","settings"];
+const GROUPS={home:["dashboard"],food:["meals","plan","prices"],chore:["chores","calendar","mood"],others:["shopping","finance","progress","settings"]};
+const GROUP_DEFAULT={home:"dashboard",food:"meals",chore:"chores",others:"shopping"};
+const PAGE_GROUP={};for(const g in GROUPS)for(const p of GROUPS[g])PAGE_GROUP[p]=g;
+const PAGE_META={dashboard:["🏠","Overview"],meals:["🍗","Meals"],plan:["📅","Plan"],prices:["🏷️","Prices"],shopping:["🛒","Shopping"],chores:["🧹","Chores"],calendar:["📆","Calendar"],mood:["😌","Mood"],finance:["💸","Finance"],progress:["📉","Progress"],settings:["⚙️","Settings"]};
+const TABS=Object.keys(PAGE_META);
+function renderSubTabs(g,active){
+  if(g==="home"){$("subTabs").style.display="none";return}
+  $("subTabs").style.display="";
+  $("subTabs").innerHTML=GROUPS[g].map(p=>{const[ic,lb]=PAGE_META[p];return `<button class="subtab ${p===active?"active":""}" onclick="tab('${p}')">${ic} ${lb}</button>`}).join("");
+}
+function tab(x){
+  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));
+  const g=PAGE_GROUP[x]||"home";
+  renderSubTabs(g,x);
+  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.nav===g));
+  if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="shopping")shopping();if(x==="chores")chores();if(x==="calendar")calendar();if(x==="mood")mood();if(x==="finance")finance();if(x==="progress")progress();if(x==="settings")settings();
+  history.replaceState(null,"","#"+x);
+}
+document.querySelectorAll(".bottom-nav button").forEach(b=>b.onclick=()=>tab(GROUP_DEFAULT[b.dataset.nav]));
 function hashTab(){const x=(location.hash||"").replace("#","");if(TABS.includes(x))tab(x)}
 window.addEventListener("hashchange",hashTab);
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
   $("todayLabel").textContent=d===today()?"Today":d;["kcal","protein","carbs","fat"].forEach((k,i)=>$( ["calTotal","proteinTotal","carbsTotal","fatTotal"][i]).textContent=Math.round(t[k]));$("calTarget").textContent=Math.round(user().target);$("calPercent").textContent=p+"%";$("calBar").style.width=p+"%";$("remainingText").textContent=t.kcal<=user().target?Math.round(user().target-t.kcal)+" kcal remaining":Math.round(t.kcal-user().target)+" kcal over target";$("planKcalBadge").textContent=`Week ${week} • ${Math.round(pk)} planned kcal`;
@@ -166,7 +184,7 @@ function dashboard(){
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;const streak=loggingStreak();$("streakTag").textContent=streak>1?`🔥 ${streak}-day streak`:streak===1?"🔥 Logged today":"";
-  renderPlate(d,p);macroHtml();renderWater();
+  renderPlate(d,p);macroHtml();renderWater();renderHub(d);renderHomeChores();
 }
 const PLATE_FOOD=["🥗","🍗","🍚","🥩","🍜","🥦","🍤","🍛"];
 function renderPlate(d,p){
@@ -269,7 +287,7 @@ function settings(){renderUserSwitch();$("profileName").value=user().name;$("gen
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;const h=$("heightInput").value;user().height=h?Math.max(1,Math.min(250,Math.round(n(h)))):null;const mg=id=>{const v=$(id).value;return v?Math.max(0,Math.round(n(v))):null};user().protein_goal=mg("proteinGoal");user().carbs_goal=mg("carbsGoal");user().fat_goal=mg("fatGoal");queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
 $("restoreBackup").onclick=async()=>{if(!confirm("Restore your last backed-up edits? This overwrites the current data."))return;try{const b=JSON.parse(localStorage.getItem(KEY+"_backup")||"null");if(!b?.users){toast("No backup found",false);return}state=b;migrate();localSave();queueSave("Restore last backup");renderAll();toast("✓ Backup restored")}catch(e){toast("Could not restore backup",false)}};
-$("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().logs={};user().weights=[];user().water={};user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
+$("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().logs={};user().weights=[];user().water={};user().moods={};user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
 function openModal(h){$("modalBody").innerHTML=h;$("modal").classList.remove("hidden")}function closeModal(){$("modal").classList.add("hidden")}$("closeModal").onclick=closeModal;$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
 $("exportCsv").onclick=()=>window.location.href="/download/meals.csv";$("exportXlsx").onclick=()=>window.location.href="/download/meals.xlsx";
 $("exportData").onclick=async()=>{try{const s=await api("/api/state");const blob=new Blob([JSON.stringify(s,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`meal-tracker-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);toast("✓ Backup downloaded")}catch(e){toast(e.message,false)}};
@@ -307,13 +325,108 @@ $("refreshPrices").onclick=async()=>{
   if(!confirm("Fetch current prices from Makro PRO? This may take a few seconds."))return;
   try{const r=await api("/api/prices/refresh",{method:"POST"});await loadPrices();prices();toast(`✓ Prices refreshed ${r.updated?new Date(r.updated).toLocaleString():""}`)}catch(e){toast(e.message,false)}
 };
-function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();progress();settings()}
+const USER_NAME={book:"BOok",jingjing:"jingjing"};
+const MOODS={great:["😄","#7FBF6E"],good:["🙂","#A9C79F"],ok:["😐","#E2D79B"],meh:["😕","#E8C39A"],bad:["😢","#D9A4B0"],awful:["😠","#C98A8A"]};
+const F_CATS={food:["🍎","Food"],transport:["🚌","Transport"],home:["🏠","Home"],utilities:["💡","Utilities"],health:["💊","Health"],fun:["🎉","Fun"],other:["📦","Other"]};
+const EVENT_COLOR={shared:"var(--primary)",book:"var(--book)",jingjing:"var(--jingjing)"};
+function monthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`}
+function shiftMonth(mk,delta){const[y,m]=mk.split("-").map(Number);return monthKey(new Date(y,m-1+delta,1))}
+function renderHub(d){
+  const mkey=monthKey(),openShop=(state.shopping.items||[]).filter(i=>!i.done).length,todayEvts=(state.calendar.events||[]).filter(e=>e.date===d).length,spent=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===mkey).reduce((a,t)=>a+(t.amount||0),0),chores=state.chores.chores||[],choresDone=chores.filter(c=>c.done&&c.done[d]).length,lastW=[...(user().weights||[])].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const cards=[["meals","🍗","Meals",`${state.meals.length} custom`],["plan","📅","Plan",`Week ${week}`],["prices","🏷️","Prices",(PRICES.items||[]).filter(i=>i.result).length+" items"],["shopping","🛒","Shopping",`${openShop} open`],["calendar","📆","Calendar",`${todayEvts} today`],["chores","🧹","Chores",`${choresDone}/${chores.length} done`],["finance","💸","Finance",`฿${Math.round(spent)} mo`],["progress","📉","Progress",lastW?`${lastW.weight} kg`:"—"]];
+  $("hubCards").innerHTML=cards.map(([p,ic,lb,st])=>`<button class="hub-card" onclick="tab('${p}')"><span class="hub-icon">${ic}</span><b>${lb}</b><small>${st}</small></button>`).join("");
+}
+function renderHomeChores(){
+  const d=today(),chores=state.chores.chores||[],done=chores.filter(c=>c.done&&c.done[d]);
+  $("homeChoresHint").textContent=`${done.length}/${chores.length} done today`;
+  $("homeChores").innerHTML=chores.length?chores.map(c=>{const who=c.done&&c.done[d];return `<div class="list-item"><span><b>${esc(c.name)}</b>${who?`<br><small>done by ${esc(USER_NAME[who])}</small>`:""}</span><button class="${who?"logged":"primary"} small" ${who?"disabled":""} onclick="toggleChore('${c.id}')">${who?"✓ Done":"Done"}</button></div>`}).join(""):'<p class="muted">No chores yet — add some on the Chores page.</p>';
+}
+function toggleChore(id){const d=today(),c=(state.chores.chores||[]).find(x=>x.id===id);if(!c)return;if(c.done&&c.done[d]){delete c.done[d]}else{c.done||={};c.done[d]=state.active_user}queueSave(`Chore "${c.name}" ${c.done[d]?"done":"undone"} by ${user().name}`);renderAll()}
+function shopping(){
+  renderUserSwitch();
+  const items=state.shopping.items||[];
+  $("shoppingContent").innerHTML=[["food","🍎","Food"],["home","🏠","Home"],["health","💊","Health"]].map(([cat,ic,lb])=>{const list=items.filter(i=>i.category===cat),open=list.filter(i=>!i.done).length;const rows=list.map(i=>`<div class="list-item"><span><label class="grocery-item"><input type="checkbox" ${i.done?"checked":""} onchange="toggleShopItem('${i.id}',this.checked)"><span style="${i.done?"text-decoration:line-through;color:var(--muted)":""}">${esc(i.name)}</span></label>${i.added_by?`<small>+ ${esc(USER_NAME[i.added_by]||i.added_by)}</small>`:""}</span><button class="danger small" onclick="deleteShopItem('${i.id}')">Delete</button></div>`).join("");return `<div class="card"><div class="card-title"><div><h3>${ic} ${lb}</h3><p class="muted">${open} open of ${list.length}</p></div></div><div class="list">${rows||'<p class="muted">Nothing here yet.</p>'}</div></div>`}).join("");
+}
+function toggleShopItem(id,checked){const i=(state.shopping.items||[]).find(x=>x.id===id);if(!i)return;i.done=checked;queueSave(`Check ${checked?"off":"on"} "${i.name}" on the shopping list`);renderAll()}
+function deleteShopItem(id){const i=(state.shopping.items||[]).find(x=>x.id===id);if(!i)return;if(!confirm(`Remove "${i.name}" from the shopping list?`))return;state.shopping.items=state.shopping.items.filter(x=>x.id!==id);queueSave(`Remove "${i.name}" from shopping list`);renderAll();toast("✓ Item removed")}
+function addShopItem(){const name=$("shopInput").value.trim();if(!name)return;state.shopping.items.push({id:"shop-"+crypto.randomUUID(),name,category:$("shopCat").value,done:false,added_by:state.active_user});$("shopInput").value="";queueSave(`Add "${name}" to shopping list`);renderAll()}
+$("openShopForm").onclick=()=>$("shopInput").focus();$("shopAdd").onclick=addShopItem;$("shopInput").addEventListener("keydown",e=>{if(e.key==="Enter")addShopItem()});
+function chores(){
+  renderUserSwitch();const d=today(),list=state.chores.chores||[],done=list.filter(c=>c.done&&c.done[d]);
+  $("choresTodayHint").textContent=`${done.length}/${list.length} done today`;
+  $("choresToday").innerHTML=list.length?list.map(c=>{const who=c.done&&c.done[d];return `<div class="list-item"><span><b>${esc(c.name)}</b>${who?`<br><small>done by ${esc(USER_NAME[who])}</small>`:""}</span><button class="${who?"logged":"primary"} small" ${who?"disabled":""} onclick="toggleChore('${c.id}')">${who?"✓ Done":"Done"}</button></div>`}).join(""):'<p class="muted">No chores yet — add one below.</p>';
+  $("choresList").innerHTML=list.map(c=>`<div class="list-item"><span>${esc(c.name)}</span><button class="danger small" onclick="deleteChore('${c.id}')">Delete</button></div>`).join("")||'<p class="muted">No chores.</p>';
+}
+$("openChoreForm").onclick=()=>{openModal(`<h2>Add chore</h2><form id="chf"><label>Chore name<input name="name" required maxlength="40" placeholder="e.g. Take out trash"></label><button class="primary">Add</button></form>`);$("chf").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),name=(f.get("name")||"").trim();if(!name)return;state.chores.chores.push({id:"chore-"+crypto.randomUUID(),name,done:{}});queueSave(`Add chore "${name}"`);closeModal();renderAll();toast("✓ Chore added")}};
+function deleteChore(id){const c=(state.chores.chores||[]).find(x=>x.id===id);if(!c)return;if(!confirm(`Delete chore "${c.name}"?`))return;state.chores.chores=state.chores.chores.filter(x=>x.id!==id);queueSave(`Delete chore "${c.name}"`);renderAll();toast("✓ Chore deleted")}
+let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFilter="all";
+function calKey(y,m,d){return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
+function calVisible(e){if(calFilter==="all")return true;if(calFilter==="shared")return e.kind==="shared";return e.kind==="personal"&&e.user===calFilter}
+function calendar(){
+  renderUserSwitch();
+  $("calMonthLabel").textContent=new Date(calY,calM,1).toLocaleString("en",{month:"long",year:"numeric"});
+  $("calFilters").innerHTML=[["all","All"],["shared","Shared"],["book","BOok"],["jingjing","jingjing"]].map(([k,lb])=>`<button class="filter-btn ${calFilter===k?"active":""}" onclick="calFilter='${k}';calendar()">${lb}</button>`).join("");
+  const first=new Date(calY,calM,1),start=first.getDay(),dim=new Date(calY,calM+1,0).getDate(),today=today(),events=state.calendar.events||[];
+  let html=['<div class="cal-weekday">Sun</div><div class="cal-weekday">Mon</div><div class="cal-weekday">Tue</div><div class="cal-weekday">Wed</div><div class="cal-weekday">Thu</div><div class="cal-weekday">Fri</div><div class="cal-weekday">Sat</div>'];
+  for(let i=0;i<start;i++)html.push('<div class="cal-day other"></div>');
+  for(let d=1;d<=dim;d++){
+    const key=calKey(calY,calM,d),evs=events.filter(e=>e.date===key&&calVisible(e));
+    const moodBars=["book","jingjing"].map(u=>{const k=state.users[u].moods&&state.users[u].moods[key];return k&&MOODS[k]?`<span style="background:${MOODS[k][1]};flex:1"></span>`:""}).join("");
+    const dots=evs.map(e=>`<span class="cal-dot" style="background:${EVENT_COLOR[e.kind==="personal"?e.user:"shared"]}"></span>`).join("");
+    const titles=evs.slice(0,2).map(e=>`<span class="cal-evt ${e.kind==="shared"?"cal-evt-shared":""}">${esc(e.title)}</span>`).join("");
+    html.push(`<div class="cal-day ${key===today?"today":""}"><b>${d}</b>${dots?`<div class="cal-dots">${dots}</div>`:""}${titles}<div class="cal-mood-bar" style="display:flex;gap:2px">${moodBars}</div></div>`);
+  }
+  const remain=7-((start+dim)%7||7);
+  for(let i=0;i<remain;i++)html.push('<div class="cal-day other"></div>');
+  $("calGrid").innerHTML=html.join("");
+  const monthEvents=events.filter(e=>e.date.slice(0,7)===calKey(calY,calM,1).slice(0,7)&&calVisible(e)).sort((a,b)=>a.date.localeCompare(b.date));
+  $("calEvents").innerHTML=monthEvents.map(e=>`<div class="list-item"><span><span class="cal-dot" style="background:${EVENT_COLOR[e.kind==="personal"?e.user:"shared"]};display:inline-block;margin-right:6px"></span><b>${esc(e.title)}</b><br><small>${e.date}${e.kind==="personal"?` • ${esc(USER_NAME[e.user]||e.user)}`:""}${e.note?` • ${esc(e.note)}`:""}</small></span><button class="danger small" onclick="deleteEvent('${e.id}')">Delete</button></div>`).join("")||'<p class="muted">No events this month.</p>';
+}
+function calNav(dir){calM+=dir;if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}calendar();mood()}
+$("calPrev").onclick=()=>calNav(-1);$("calNext").onclick=()=>calNav(1);$("calToday").onclick=()=>{const t=new Date();calY=t.getFullYear();calM=t.getMonth();calendar()};
+$("moodPrev").onclick=()=>calNav(-1);$("moodNext").onclick=()=>calNav(1);
+$("addEventBtn").onclick=()=>{openModal(`<h2>Add event</h2><form id="evf"><label>Title<input name="title" required maxlength="60"></label><label>Date<input name="date" type="date" value="${today()}" required></label><label>Type<select name="kind"><option value="shared">Shared</option><option value="personal">Personal</option></select></label><label>Owner (for personal)<select name="user"><option value="book">BOok</option><option value="jingjing">jingjing</option></select></label><label>Note<input name="note" maxlength="120"></label><button class="primary">Add event</button></form>`);$("evf").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),title=(f.get("title")||"").trim();if(!title)return;const kind=f.get("kind");state.calendar.events.push({id:"evt-"+crypto.randomUUID(),title,date:f.get("date"),kind,user:kind==="personal"?f.get("user"):"",note:(f.get("note")||"").trim()});queueSave(`Add event "${title}"`);closeModal();renderAll();toast("✓ Event added")}};
+function deleteEvent(id){const e=(state.calendar.events||[]).find(x=>x.id===id);if(!e)return;if(!confirm(`Delete event "${e.title}"?`))return;state.calendar.events=state.calendar.events.filter(x=>x.id!==id);queueSave(`Delete event "${e.title}"`);renderAll();toast("✓ Event deleted")}
+function mood(){
+  renderUserSwitch();const d=today(),u=user(),cur=u.moods&&u.moods[d];
+  $("moodUser").textContent=`${u.name}'s mood`;
+  $("moodOptions").innerHTML=Object.keys(MOODS).map(k=>`<button class="mood-btn ${k===cur?"active":""}" title="${k}" onclick="setMood('${k}')">${MOODS[k][0]}</button>`).join("");
+  $("moodNote").textContent=cur?`Logged ${MOODS[cur][0]} for today — tap again to clear.`:"Pick how you're feeling today.";
+  $("moodMonthLabel").textContent=new Date(calY,calM,1).toLocaleString("en",{month:"long",year:"numeric"});
+  const first=new Date(calY,calM,1),start=first.getDay(),dim=new Date(calY,calM+1,0).getDate(),today=today(),cells=[];
+  for(let i=0;i<start;i++)cells.push('<div class="mood-cell" style="visibility:hidden"></div>');
+  for(let d=1;d<=dim;d++){const key=calKey(calY,calM,d),k=u.moods&&u.moods[key],mk=k&&MOODS[k];cells.push(`<div class="mood-cell" style="${mk?`background:${mk[1]}`:"background:var(--surface-soft)"}">${d}${mk?`<span style="font-size:14px">${mk[0]}</span>`:""}</div>`)}
+  const remain=7-((start+dim)%7||7);
+  for(let i=0;i<remain;i++)cells.push('<div class="mood-cell" style="visibility:hidden"></div>');
+  $("moodMonth").innerHTML=cells.join("");
+}
+function setMood(k){const d=today();if(user().moods[d]===k){delete user().moods[d]}else{user().moods[d]=k}queueSave(`Log mood for ${user().name}`);renderAll()}
+let finMonth=monthKey();
+function finance(){
+  renderUserSwitch();
+  $("finMonthLabel").textContent=finMonth;
+  const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth),budgets=(state.finance.budgets||{})[finMonth]||{},unsettled=(state.finance.transactions||[]).filter(t=>!t.settled);
+  const bPaid=unsettled.filter(t=>t.paid_by==="book").reduce((a,t)=>a+(t.amount||0),0),jPaid=unsettled.filter(t=>t.paid_by==="jingjing").reduce((a,t)=>a+(t.amount||0),0),net=Math.round(bPaid-jPaid);
+  $("iouCard").innerHTML=`<div class="card-title"><h3>Who owes whom</h3></div><div class="iou-row"><span>BOok paid (unsettled)</span><b>฿${Math.round(bPaid)}</b></div><div class="iou-row"><span>jingjing paid (unsettled)</span><b>฿${Math.round(jPaid)}</b></div><div class="iou-row"><span>Balance</span><b>${net>0?`jingjing owes BOok ฿${net}`:net<0?`BOok owes jingjing ฿${-net}`:"All settled"}</b></div>`;
+  const spent={};txs.forEach(t=>{spent[t.category]=(spent[t.category]||0)+t.amount});
+  const withBudget=Object.keys(F_CATS).filter(c=>(budgets[c]||0)>0);
+  $("budgetBars").innerHTML=withBudget.length?withBudget.map(c=>{const b=budgets[c],s=spent[c]||0,p=Math.min(100,Math.round(s/b*100));return `<div class="budget-row"><span>${F_CATS[c][0]} ${F_CATS[c][1]}</span><div class="hbar"><i style="width:${p}%"></i></div><b>฿${Math.round(s)}/${Math.round(b)}</b></div>`}).join(""):'<p class="muted">No budgets set for this month — tap "Set budgets".</p>';
+  $("financeList").innerHTML=txs.slice().reverse().map(t=>{const s=F_CATS[t.category]||F_CATS.other;return `<div class="list-item fin-item"><span><b>${esc(t.description||"(no title)")}</b><br><small>${t.date} • ${s[0]} ${s[1]} • paid by ${esc(USER_NAME[t.paid_by])}</small></span><div class="actions"><button class="${t.settled?"logged":"secondary"} small" onclick="toggleSettled('${t.id}')">${t.settled?"✓ Settled":"Settle"}</button><button class="danger small" onclick="deleteExpense('${t.id}')">Delete</button><b style="color:var(--primary-deep);font-variant-numeric:tabular-nums">฿${Math.round(t.amount)}</b></div></div>`}).join("")||'<p class="muted">No expenses this month.</p>';
+}
+function toggleSettled(id){const t=(state.finance.transactions||[]).find(x=>x.id===id);if(!t)return;t.settled=!t.settled;queueSave(`Mark "${t.description}" ${t.settled?"settled":"unsettled"}`);renderAll()}
+function deleteExpense(id){const t=(state.finance.transactions||[]).find(x=>x.id===id);if(!t)return;if(!confirm(`Delete expense "${t.description}" (฿${Math.round(t.amount)})?`))return;state.finance.transactions=state.finance.transactions.filter(x=>x.id!==id);queueSave(`Delete expense "${t.description}"`);renderAll();toast("✓ Expense deleted")}
+$("finPrev").onclick=()=>{finMonth=shiftMonth(finMonth,-1);finance()};$("finNext").onclick=()=>{finMonth=shiftMonth(finMonth,1);finance()};
+$("addExpenseBtn").onclick=()=>{openModal(`<h2>Add expense</h2><form id="exf"><label>Description<input name="description" required maxlength="60" placeholder="e.g. Groceries"></label><div class="form-grid"><label>Amount (฿)<input name="amount" type="number" min="0" step=".01" required></label><label>Date<input name="date" type="date" value="${today()}" required></label></div><label>Category<select name="category">${Object.keys(F_CATS).map(c=>`<option value="${c}">${F_CATS[c][0]} ${F_CATS[c][1]}</option>`).join("")}</select></label><label>Paid by<select name="paid_by"><option value="book">BOok</option><option value="jingjing">jingjing</option></select></label><button class="primary">Save</button></form>`);$("exf").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),desc=(f.get("description")||"").trim(),amt=Math.max(0,n(f.get("amount")));if(!desc||!amt)return;state.finance.transactions.push({id:"tx-"+crypto.randomUUID(),description:desc,category:f.get("category"),amount:amt,paid_by:f.get("paid_by"),date:f.get("date"),settled:false});queueSave(`Add expense "${desc}" ฿${Math.round(amt)}`);closeModal();renderAll();toast("✓ Expense added")}};
+$("editBudgetBtn").onclick=()=>{const cur=(state.finance.budgets||{})[finMonth]||{};openModal(`<h2>Budget — ${finMonth}</h2><form id="bdf"><div class="form-grid">${Object.keys(F_CATS).map(c=>`<label>${F_CATS[c][0]} ${F_CATS[c][1]} (฿)<input name="${c}" type="number" min="0" value="${cur[c]||""}"></label>`).join("")}</div><p class="muted">Leave blank for categories without a budget.</p><button class="primary">Save budget</button></form>`);$("bdf").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),b={};Object.keys(F_CATS).forEach(c=>{const v=Number(f.get(c));if(v>0)b[c]=v});state.finance.budgets||={};state.finance.budgets[finMonth]=b;queueSave(`Set budget for ${finMonth}`);closeModal();renderAll();toast("✓ Budget saved")}};
+$("settleAllBtn").onclick=()=>{const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth&&!t.settled);if(!txs.length){toast("Nothing to settle",false);return}txs.forEach(t=>t.settled=true);queueSave("Settle all for "+finMonth);renderAll();toast("✓ All settled")};
+setInterval(async()=>{if(!persistent||pendingMessages.length)return;try{const s=await api("/api/state");let changed=false;for(const k of ["shopping","calendar","finance","chores"]){if(JSON.stringify(s[k])!==JSON.stringify(state[k])){state[k]=s[k];changed=true}}if(changed)renderAll()}catch(e){}},25000);
+function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings()}
 async function boot(){
   localLoad(); migrate(); applyTheme(); state.active_user=localStorage.getItem(KEY+"Active")||state.active_user||"book";
   try{const c=await api("/api/config");auth=c.auth;persistent=c.persistent;if(auth && !password){setBanner("🔐 Enter the app password in Profile & Settings to load cloud data.","warn")}else{await loadCloud()}}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
   await loadCatalog();
   await loadPrices();
   renderAll();
-  hashTab();
+  tab((location.hash||"").replace("#","")||"dashboard");
 }
 boot();
