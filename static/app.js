@@ -157,22 +157,12 @@ function copyLastDay(){
 }
 $("copyDayBtn").onclick=copyLastDay;
 const TABS=["dashboard","meals","plan","prices","shopping","chores","calendar","mood","finance","progress","settings"];
-const NAV_MAP={dashboard:"dashboard",meals:"dashboard",plan:"dashboard",prices:"dashboard",shopping:"shopping",chores:"chores",calendar:"calendar",mood:"calendar",finance:"finance",progress:"settings",settings:"settings"};
-
 function tab(x){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));
   document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));
-  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
-  const navKey=NAV_MAP[x]||"dashboard";
-  const navBtn=document.querySelector(`.nav-item[data-nav="${navKey}"]`);
-  if(navBtn)navBtn.classList.add("active");
   if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="shopping")shopping();if(x==="chores")chores();if(x==="calendar")calendar();if(x==="mood")mood();if(x==="finance")finance();if(x==="progress")progress();if(x==="settings")settings();
   history.replaceState(null,"","#"+x);
 }
-
-document.querySelectorAll(".nav-item").forEach(btn=>{
-  btn.onclick=()=>{const nav=btn.dataset.nav;if(nav==="dashboard")tab("dashboard");else if(nav==="shopping")tab("shopping");else if(nav==="calendar")tab("calendar");else if(nav==="chores")tab("chores");else if(nav==="finance")tab("finance");else if(nav==="settings")tab("settings")};
-});
-
 function hashTab(){const x=(location.hash||"").replace("#","");if(TABS.includes(x))tab(x)}
 window.addEventListener("hashchange",hashTab);
 function dashboard(){
@@ -183,7 +173,7 @@ function dashboard(){
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;const streak=loggingStreak();$("streakTag").textContent=streak>1?`🔥 ${streak}-day streak`:streak===1?"🔥 Logged today":"";
-  renderPlate(d,p);macroHtml();renderWater();renderHub(d);
+  renderPlate(d,p);macroHtml();renderWater();renderHub(d);renderHomeChores();
 }
 const PLATE_FOOD=["🥗","🍗","🍚","🥩","🍜","🥦","🍤","🍛"];
 function renderPlate(d,p){
@@ -332,15 +322,13 @@ function monthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()
 function shiftMonth(mk,delta){const[y,m]=mk.split("-").map(Number);return monthKey(new Date(y,m-1+delta,1))}
 function renderHub(d){
   const mkey=monthKey(),openShop=(state.shopping.items||[]).filter(i=>!i.done).length,todayEvts=(state.calendar.events||[]).filter(e=>e.date===d).length,spent=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===mkey).reduce((a,t)=>a+(t.amount||0),0),chores=state.chores.chores||[],choresDone=chores.filter(c=>c.done&&c.done[d]).length,lastW=[...(user().weights||[])].sort((a,b)=>b.date.localeCompare(a.date))[0];
-  const budgetMonth=(state.finance.budgets||{})[mkey]||{},budgetTotal=Object.values(budgetMonth).reduce((a,b)=>a+b,0),budgetPct=budgetTotal>0?Math.round(spent/budgetTotal*100):0;
-  $("statShopping").textContent=openShop;$("statEvents").textContent=todayEvts;$("statChores").textContent=choresDone;$("statBudget").textContent=budgetPct+"%";
-  const cards=[["meals","Meals",`${state.meals.length} custom`],["plan","Plan",`Week ${week}`],["prices","Prices",(PRICES.items||[]).filter(i=>i.result).length+" items"],["progress","Progress",lastW?`${lastW.weight} kg`:"—"]];
-  $("hubCards").innerHTML=cards.map(([p,lb,st])=>`<button class="hub-card" onclick="tab('${p}')"><b>${lb}</b><small>${st}</small></button>`).join("");
-  $("homeChores").innerHTML=chores.length?chores.slice(0,3).map(c=>{const who=c.done&&c.done[d];return `<div class="list-item"><span><b>${esc(c.name)}</b>${who?`<br><small>done by ${esc(USER_NAME[who])}</small>`:""}</span></div>`}).join(""):'<p class="muted">No chores yet</p>';
-  $("homeShopping").innerHTML=openShop?(state.shopping.items||[]).filter(i=>!i.done).slice(0,3).map(i=>`<div class="list-item"><span>${esc(i.name)}</span><span class="item-tag">${i.category}</span></div>`).join(""):'<p class="muted">Shopping list empty</p>';
-  const upcoming=(state.calendar.events||[]).filter(e=>e.date>=d).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
-  $("homeEvents").innerHTML=upcoming.length?upcoming.map(e=>`<div class="list-item"><span>${esc(e.title)}</span><span class="item-tag">${e.date.slice(5)}</span></div>`).join(""):'<p class="muted">No upcoming events</p>';
-  $("homeFinance").innerHTML=`<div class="budget-bar-wrap"><div class="budget-bar-labels"><span>Budget used</span><span>฿${Math.round(spent)} / ฿${Math.round(budgetTotal)}</span></div><div class="budget-bar"><div class="budget-bar-fill" style="width:${budgetPct}%"></div></div></div>`;
+  const cards=[["meals","🍗","Meals",`${state.meals.length} custom`],["plan","📅","Plan",`Week ${week}`],["prices","🏷️","Prices",(PRICES.items||[]).filter(i=>i.result).length+" items"],["shopping","🛒","Shopping",`${openShop} open`],["calendar","📆","Calendar",`${todayEvts} today`],["chores","🧹","Chores",`${choresDone}/${chores.length} done`],["finance","💸","Finance",`฿${Math.round(spent)} mo`],["progress","📉","Progress",lastW?`${lastW.weight} kg`:"—"]];
+  $("hubCards").innerHTML=cards.map(([p,ic,lb,st])=>`<button class="hub-card" onclick="tab('${p}')"><span class="hub-icon">${ic}</span><b>${lb}</b><small>${st}</small></button>`).join("");
+}
+function renderHomeChores(){
+  const d=today(),chores=state.chores.chores||[],done=chores.filter(c=>c.done&&c.done[d]);
+  $("homeChoresHint").textContent=`${done.length}/${chores.length} done today`;
+  $("homeChores").innerHTML=chores.length?chores.map(c=>{const who=c.done&&c.done[d];return `<div class="list-item"><span><b>${esc(c.name)}</b>${who?`<br><small>done by ${esc(USER_NAME[who])}</small>`:""}</span><button class="${who?"logged":"primary"} small" ${who?"disabled":""} onclick="toggleChore('${c.id}')">${who?"✓ Done":"Done"}</button></div>`}).join(""):'<p class="muted">No chores yet — add some on the Chores page.</p>';
 }
 function toggleChore(id){const d=today(),c=(state.chores.chores||[]).find(x=>x.id===id);if(!c)return;if(c.done&&c.done[d]){delete c.done[d]}else{c.done||={};c.done[d]=state.active_user}queueSave(`Chore "${c.name}" ${c.done[d]?"done":"undone"} by ${user().name}`);renderAll()}
 function shopping(){
