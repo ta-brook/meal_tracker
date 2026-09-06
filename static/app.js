@@ -155,25 +155,13 @@ function copyLastDay(){
   queueSave(`Copy meals from ${prev}`);renderAll();toast(`✓ Copied ${added.length} meal${added.length===1?"":"s"} from ${prev.slice(5)}`);
 }
 $("copyDayBtn").onclick=copyLastDay;
-const GROUPS={home:["dashboard"],food:["meals","plan","prices"],chore:["chores","calendar","mood"],others:["shopping","finance","progress","settings"]};
-const GROUP_DEFAULT={home:"dashboard",food:"meals",chore:"chores",others:"shopping"};
-const PAGE_GROUP={};for(const g in GROUPS)for(const p of GROUPS[g])PAGE_GROUP[p]=g;
-const PAGE_META={dashboard:["🏠","Overview"],meals:["🍗","Meals"],plan:["📅","Plan"],prices:["🏷️","Prices"],shopping:["🛒","Shopping"],chores:["🧹","Chores"],calendar:["📆","Calendar"],mood:["😌","Mood"],finance:["💸","Finance"],progress:["📉","Progress"],settings:["⚙️","Settings"]};
-const TABS=Object.keys(PAGE_META);
-function renderSubTabs(g,active){
-  if(g==="home"){$("subTabs").style.display="none";return}
-  $("subTabs").style.display="";
-  $("subTabs").innerHTML=GROUPS[g].map(p=>{const[ic,lb]=PAGE_META[p];return `<button class="subtab ${p===active?"active":""}" onclick="tab('${p}')">${ic} ${lb}</button>`}).join("");
-}
+const TABS=["dashboard","meals","plan","prices","shopping","chores","calendar","mood","finance","progress","settings"];
 function tab(x){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));
   document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));
-  const g=PAGE_GROUP[x]||"home";
-  renderSubTabs(g,x);
-  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.nav===g));
   if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="shopping")shopping();if(x==="chores")chores();if(x==="calendar")calendar();if(x==="mood")mood();if(x==="finance")finance();if(x==="progress")progress();if(x==="settings")settings();
   history.replaceState(null,"","#"+x);
 }
-document.querySelectorAll(".bottom-nav button").forEach(b=>b.onclick=()=>tab(GROUP_DEFAULT[b.dataset.nav]));
 function hashTab(){const x=(location.hash||"").replace("#","");if(TABS.includes(x))tab(x)}
 window.addEventListener("hashchange",hashTab);
 function dashboard(){
@@ -420,9 +408,7 @@ $("addExpenseBtn").onclick=()=>{openModal(`<h2>Add expense</h2><form id="exf"><l
 $("editBudgetBtn").onclick=()=>{const cur=(state.finance.budgets||{})[finMonth]||{};openModal(`<h2>Budget — ${finMonth}</h2><form id="bdf"><div class="form-grid">${Object.keys(F_CATS).map(c=>`<label>${F_CATS[c][0]} ${F_CATS[c][1]} (฿)<input name="${c}" type="number" min="0" value="${cur[c]||""}"></label>`).join("")}</div><p class="muted">Leave blank for categories without a budget.</p><button class="primary">Save budget</button></form>`);$("bdf").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),b={};Object.keys(F_CATS).forEach(c=>{const v=Number(f.get(c));if(v>0)b[c]=v});state.finance.budgets||={};state.finance.budgets[finMonth]=b;queueSave(`Set budget for ${finMonth}`);closeModal();renderAll();toast("✓ Budget saved")}};
 $("settleAllBtn").onclick=()=>{const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth&&!t.settled);if(!txs.length){toast("Nothing to settle",false);return}txs.forEach(t=>t.settled=true);queueSave("Settle all for "+finMonth);renderAll();toast("✓ All settled")};
 setInterval(async()=>{if(!persistent||pendingMessages.length)return;try{const s=await api("/api/state");let changed=false;for(const k of ["shopping","calendar","finance","chores"]){if(JSON.stringify(s[k])!==JSON.stringify(state[k])){state[k]=s[k];changed=true}}if(changed)renderAll()}catch(e){}},25000);
-function setBadge(nav,text){const b=document.querySelector(`.bottom-nav button[data-nav="${nav}"] .bn-badge`);if(!b)return;const v=Number(text)||0;if(v<=0){b.textContent="";b.style.display="none"}else{b.textContent=v>99?"99+":v;b.style.display="flex"}}
-function renderBadges(){const d=today(),chores=state.chores.chores||[],undone=chores.filter(c=>!c.done||!c.done[d]).length,openShop=(state.shopping.items||[]).filter(i=>!i.done).length;setBadge("home","");setBadge("food","");setBadge("chore",undone);setBadge("others",openShop)}
-function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings();renderBadges()}
+function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings()}
 async function boot(){
   localLoad(); migrate(); applyTheme(); state.active_user=localStorage.getItem(KEY+"Active")||state.active_user||"book";
   try{const c=await api("/api/config");auth=c.auth;persistent=c.persistent;if(auth && !password){setBanner("🔐 Enter the app password in Profile & Settings to load cloud data.","warn")}else{await loadCloud()}}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
