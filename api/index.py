@@ -3,7 +3,7 @@ import urllib.error
 
 from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
 
-from api import catalog, config, github, meals, state
+from api import catalog, config, github, meals, prices, state
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
@@ -194,6 +194,30 @@ def update_meal_catalog():
         return jsonify(error="Catalog save failed"), 500
     except Exception:
         return jsonify(error="Catalog save failed"), 500
+
+
+@app.get("/api/prices")
+def get_prices():
+    # Open like /api/meal-catalog: market prices are not sensitive.
+    return jsonify(prices.read_prices())
+
+
+@app.post("/api/prices/refresh")
+def refresh_prices():
+    if not check_password():
+        return jsonify(error="Unauthorized"), 401
+    if not config.persistent():
+        return jsonify(error="Cloud persistence required — GitHub is not configured."), 400
+    try:
+        data = prices.fetch_prices()
+        github.commit_files({prices.PRICES_GIT: prices.serialize(data)}, "Update Makro PRO prices")
+        return jsonify(ok=True, updated=data["updated"])
+    except RuntimeError as e:
+        if str(e) == "CONFLICT":
+            return _conflict()
+        return jsonify(error="Price refresh failed"), 500
+    except Exception:
+        return jsonify(error="Price refresh failed"), 500
 
 
 @app.get("/download/meals.csv")

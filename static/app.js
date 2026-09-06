@@ -1,4 +1,4 @@
-let CATALOG = [], mealQuery = "";
+let CATALOG = [], mealQuery = "", PRICES = {updated:null,items:[]};
 const KEY = "mealTrackerV4";
 const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{}};
 let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],active_user:"book"};
@@ -137,6 +137,7 @@ function planMeals(){
 function renderUserSwitch(){const u=user();$("activeUser").textContent=u.name;$("userMe").classList.toggle("active",state.active_user==="book");$("userGf").classList.toggle("active",state.active_user==="jingjing");$("profileSummary").textContent=`${u.name} • ${u.target} kcal/day${u.goal?` • goal ${u.goal} kg`:""}`;$("progressUser").textContent=u.name}
 async function switchUser(id){state.active_user=id;localStorage.setItem(KEY+"Active",id);renderAll();toast(`Switched to ${user().name}`)}
 $("userMe").onclick=()=>switchUser("book");$("userGf").onclick=()=>switchUser("jingjing");
+$("openSettings").onclick=()=>tab("settings");
 $("datePicker").value=today();$("datePicker").onchange=dashboard;
 function shiftDay(delta){const dt=new Date(($("datePicker").value||today())+"T12:00:00");if(isNaN(dt))return;dt.setDate(dt.getDate()+delta);$("datePicker").value=dt.toISOString().slice(0,10);dashboard()}
 function goToday(){$("datePicker").value=today();dashboard()}
@@ -151,7 +152,7 @@ function copyLastDay(){
   queueSave(`Copy meals from ${prev}`);renderAll();toast(`✓ Copied ${added.length} meal${added.length===1?"":"s"} from ${prev.slice(5)}`);
 }
 $("copyDayBtn").onclick=copyLastDay;
-function tab(x){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="progress")progress();if(x==="settings")settings()}
+function tab(x){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="progress")progress();if(x==="settings")settings()}
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
@@ -266,11 +267,36 @@ let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;const b=$("installBtn");if(b)b.hidden=false});
 $("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true;toast("✓ App installed")};
 if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}))}
-function renderAll(){renderUserSwitch();dashboard();meals();planView();progress();settings()}
+const PRICE_GROUPS = {meat:["🥩","Meat & Protein"],veg:["🥬","Vegetables & Herbs"],staple:["🍚","Staples & Sauces"]};
+async function loadPrices(){try{PRICES=await api("/api/prices")}catch(e){PRICES={updated:null,items:[]}}}
+function priceFmt(n){return n==null?"—":(Number(n)%1?Number(n).toFixed(2):Number(n))}
+function prices(){
+  renderUserSwitch();
+  const upd=PRICES.updated?new Date(PRICES.updated).toLocaleString():null;
+  $("pricesUpdated").textContent=upd||"never";
+  $("refreshPrices").hidden=!(persistent&&auth&&password);
+  const groups={};
+  (PRICES.items||[]).forEach(it=>{const g=groups[it.category]||(groups[it.category]=[]);g.push(it)});
+  $("pricesContent").innerHTML=Object.keys(PRICE_GROUPS).filter(c=>groups[c]&&groups[c].length).map(c=>{
+    const [icon,label]=PRICE_GROUPS[c];
+    const rows=groups[c].map(it=>{
+      const r=it.result;
+      if(!r||r.price==null) return `<div class="price-item"><div class="price-info"><b>${esc(it.name)}</b><small class="muted">Unavailable</small></div><div class="price-val muted-val">—</div></div>`;
+      return `<div class="price-item" title="${esc(r.title_en||r.title)}"><div class="price-info"><b>${esc(it.name)}</b><small>${esc(r.title)}</small></div><div class="price-val">฿${priceFmt(r.price)}<small>${esc(r.unit)}</small></div></div>`;
+    }).join("");
+    return `<div class="card price-group"><div class="card-title"><h3>${icon} ${label}</h3></div><div class="price-list">${rows}</div></div>`;
+  }).join("")||'<div class="card"><p class="muted">No price data yet. Run scripts/fetch_makro_prices.py or click Refresh prices.</p></div>';
+}
+$("refreshPrices").onclick=async()=>{
+  if(!confirm("Fetch current prices from Makro PRO? This may take a few seconds."))return;
+  try{const r=await api("/api/prices/refresh",{method:"POST"});await loadPrices();prices();toast(`✓ Prices refreshed ${r.updated?new Date(r.updated).toLocaleString():""}`)}catch(e){toast(e.message,false)}
+};
+function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();progress();settings()}
 async function boot(){
   localLoad(); migrate(); applyTheme(); state.active_user=localStorage.getItem(KEY+"Active")||state.active_user||"book";
   try{const c=await api("/api/config");auth=c.auth;persistent=c.persistent;if(auth && !password){setBanner("🔐 Enter the app password in Profile & Settings to load cloud data.","warn")}else{await loadCloud()}}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
   await loadCatalog();
+  await loadPrices();
   renderAll();
 }
 boot();

@@ -16,11 +16,14 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
   - `api/state.py` — user schema + deep validation/coercion, per-user read (`read_user(s)`), and atomic-friendly serialization.
   - `api/meals.py` — shared custom-meal library (`read_meals`, `normalize_meals`, `serialize`).
   - `api/catalog.py` — catalog CSV/XLSX read/write (`catalog_source`, `write_catalog`, `normalize_catalog_row`).
-- `templates/index.html` — single page, tabs: Dashboard, Meals, Plan, Progress, Profile & Settings.
+  - `api/prices.py` — Makro PRO market prices: `ITEMS` list, `fetch_prices()` (parallel search of `search.maknet.siammakro.cloud`), `read_prices()`, `serialize()`.
+- `templates/index.html` — single page, tabs: Dashboard, Meals, Plan, **Prices**, Progress, Profile & Settings.
 - `static/app.js` — vanilla JS state management and rendering; no build step, no framework.
 - `static/style.css` — pastel theme on CSS variables (tokens live in `.interface-design/system.md`).
 - `.interface-design/system.md` — design tokens (sage + cream + peach): palette, radius, spacing, depth, type.
 - `data/meals.csv` — meal catalog source of truth; `data/meals.xlsx` regenerated server-side on catalog writes.
+- `data/prices.json` — Makro PRO price snapshot (`{updated, items:[{id,category,name,search,result}]}`); refreshable.
+- `scripts/fetch_makro_prices.py` — refreshes `data/prices.json` from Makro PRO (run from repo root).
 - `book/state.json`, `jingjing/state.json`, `meals.json` — the live data **on GitHub** (repo-root paths from `USER_FILES` + `MEALS_FILE`).
 - `data/book/state.json`, `data/jingjing/state.json`, `data/meals.json` — local fallback copies (GitHub not configured).
 - `vercel.json` — routes everything to `api/index.py`.
@@ -59,7 +62,7 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
 - **Writes are atomic**: `commit_files()` creates ONE commit for all changed files (both users + shared meals together, or catalog csv+xlsx together). Either all files update or none. On a 409 branch race it re-reads the head and retries once, then surfaces `RuntimeError("CONFLICT")` → the API returns 409.
 - `PUT|POST /api/state` accepts `{users, meals?, message}`; only files whose content actually changed are written (no-op saves are skipped).
 - Auth: optional shared `APP_PASSWORD` on data endpoints (`check_password`). `GET /api/meal-catalog` and downloads stay open.
-- Endpoints: `GET /` (page), `GET /api/config`, `GET /api/state` (`{users, meals}`), `PUT|POST /api/state`, `GET|POST /api/meal-catalog` (GET open), `DELETE /api/meal-catalog`, `GET /download/meals.csv`, `GET /download/meals.xlsx`.
+- Endpoints: `GET /` (page), `GET /sw.js`, `GET /manifest.json`, `GET /api/config`, `GET /api/state` (`{users, meals}`), `PUT|POST /api/state`, `GET|POST /api/meal-catalog` (GET open), `DELETE /api/meal-catalog`, `GET /api/prices` (open), `POST /api/prices/refresh` (auth + GitHub only), `GET /download/meals.csv`, `GET /download/meals.xlsx`.
 - The browser never receives the GitHub token; all GitHub I/O happens server-side.
 
 ## Meal catalog (`data/meals.csv`)

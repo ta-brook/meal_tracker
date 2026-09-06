@@ -1,0 +1,357 @@
+{
+  "updated": "2026-09-06T08:24:35+00:00",
+  "items": [
+    {
+      "id": "chicken-breast",
+      "category": "meat",
+      "name": "อกไก่",
+      "name_en": "Chicken breast",
+      "search": "อกไก่",
+      "result": {
+        "title": "อกไก่เนื้อล้วนลอกหนัง 1 กก.",
+        "title_en": "Chicken Breast Without Skin 1 kg",
+        "price": 107,
+        "original_price": 107,
+        "unit": "1 unit(s)",
+        "category": "meat/poultry/chilled",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "chicken-tenderloin",
+      "category": "meat",
+      "name": "สันในไก่",
+      "name_en": "Chicken tenderloin",
+      "search": "สันในไก่",
+      "result": {
+        "title": "ซีพี สันในไก่ แพ็ค 1 กก.",
+        "title_en": "CP Chicken Fillet 1 kg",
+        "price": 104,
+        "original_price": 104,
+        "unit": "1 unit(s)",
+        "category": "meat/poultry/chilled",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "minced-chicken",
+      "category": "meat",
+      "name": "ไก่บด",
+      "name_en": "Minced chicken",
+      "search": "ไก่บด",
+      "result": {
+        "title": "อกไก่บด 1 กก.",
+        "title_en": "Chicken Boneless Breast Mince 1 kg",
+        "price": 93,
+        "original_price": 93,
+        "unit": "1 unit(s)",
+        "category": "meat/poultry/chilled",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "minced-pork",
+      "category": "meat",
+      "name": "หมูบด",
+      "name_en": "Minced pork",
+      "search": "เนื้อหมูบด",
+      "result": {
+        "title": "เนื้อหมูบด ผสมมัน 10% 1 กก.",
+        "title_en": "Fresh Minced Pork with Fat 10% 1 kg",
+        "price": 139,
+        "original_price": 139,
+        "unit": "1 kg",
+        "category": "meat/pork/frozen",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "pork-loin",
+      "category": "meat",
+      "name": "สันในหมู",
+      "name_en": "Pork loin",
+      "search": "สันในหมู",
+      "result": {
+        "title": "พีเอสฟู้ดส์ สันในหมูกระทะแช่แข็ง แพ็ค 1 กก.",
+        "title_en": "PS FOOD Frozen Pork Tenderloin Pan 1 kg",
+        "price": 155,
+        "original_price": 155,
+        "unit": "1 unit(s)",
+        "category": "meat/pork/frozen",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "eggs",
+      "category": "meat",
+      "name": "ไข่ไก่",
+      "name_en": "Eggs",
+      "search": "ไข่ไก่",
+      "result": {
+        "title": "เอโร่ ไข่ไก่ เบอร์ 0 มีฝา 30 ฟอง",
+        "title_en": "ARO Chicken Egg no.0 with Cover 30 pcs",
+        "price": 168,
+        "original_price": 168,
+        "unit": "30 unit(s)",
+        "category": "dry-grocery/eggs/chicken-egg",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "shrimp",
+      "category": "meat",
+      "name": "กุ้ง",
+      "name_en": "Shrimp",
+      "search": "กุ้ง",
+      "result": {
+        "title": "กุ้งขาวไว้หางแช่แข็ง (45-55 ตัว/ถุง) 1 กก.",
+        "title_en": "Frozen Peeled Deveined Tail On White Shrimp (45-55 pcs/pack) 1 kg",
+        "price": 189,
+        "original_price": 189,
+        "unit": "1 unit(s)",
+        "category": "fish-seafood/shrip-prawns/frozen",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "fish",
+      "category": "meat",
+      "name": "เนื้อปลา",
+      "name_en": "Fish",
+      "search": "เนื้อปลา",
+      "result": {
+        "title": "วรา เนื้อปลาทู 200 ก.",
+        "title_en": "WARA Steamed Mackerel Meat 200 g",
+        "price": 59,
+        "original_price": 59,
+        "unit": "1 unit(s)",
+        "category": "fish-seafood/fish/frozen",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "holy-basil",
+      "category": "veg",
+      "name": "ใบกะเพรา",
+      "name_en": "Holy basil",
+      "search": "ใบกะเพรา",
+      "result": {
+        "title": "ใบกะเพรา 150 ก.",
+        "title_en": "Sweet Basil Leaf 150 g",
+        "price": 17,
+        "original_price": 17,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "garlic",
+      "category": "veg",
+      "name": "กระเทียม",
+      "name_en": "Garlic",
+      "search": "กระเทียม",
+      "result": {
+        "title": "กระเทียมจีนแกะกลีบ 1 กก.",
+        "title_en": "Imported Garlics Clove 1 kg",
+        "price": 72,
+        "original_price": 72,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "bird-chili",
+      "category": "veg",
+      "name": "พริกขี้หนู",
+      "name_en": "Bird chili",
+      "search": "พริกขี้หนู",
+      "result": {
+        "title": "พริกขี้หนูแดง 1 กก.",
+        "title_en": "Red Chili 1 kg",
+        "price": 99,
+        "original_price": 99,
+        "unit": "1 kg",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "bell-pepper",
+      "category": "veg",
+      "name": "พริกหวาน",
+      "name_en": "Bell pepper",
+      "search": "พริกหวาน",
+      "result": {
+        "title": "พริกยักษ์สามสี 500 กรัม แพ็คละ",
+        "title_en": "Tricolor Bell Pepper A-Grade500g",
+        "price": 69,
+        "original_price": 69,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "onion",
+      "category": "veg",
+      "name": "หอมหัวใหญ่",
+      "name_en": "Onion",
+      "search": "หอมหัวใหญ่",
+      "result": {
+        "title": "หอมใหญ่นอก ยกกระสอบ กระสอบละ 9-10.5 กก.",
+        "title_en": "Imported Onion 9-10.5 kg",
+        "price": 310,
+        "original_price": 310,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/imported-organice-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "broccoli",
+      "category": "veg",
+      "name": "บรอกโคลี",
+      "name_en": "Broccoli",
+      "search": "บรอกโคลี",
+      "result": {
+        "title": "เอโร่ บรอกโคลีแช่แข็ง 1 กก.",
+        "title_en": "ARO Frozen Broccoli 1 kg",
+        "price": 59,
+        "original_price": 59,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/frozen-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "carrot",
+      "category": "veg",
+      "name": "แครอท",
+      "name_en": "Carrot",
+      "search": "แครอท",
+      "result": {
+        "title": "แครอทนอก จีน ลังละ 10 กก.",
+        "title_en": "Import Chinese Carrot 10 kg",
+        "price": 180,
+        "original_price": 180,
+        "unit": "1 carton(s)",
+        "category": "fruit-vegetables/vegetables/imported-organice-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "cabbage",
+      "category": "veg",
+      "name": "กะหล่ำปลี",
+      "name_en": "Cabbage",
+      "search": "กะหล่ำปลี",
+      "result": {
+        "title": "กะหล่ําปลี แพ็ค 700 ก.",
+        "title_en": "Cabbage pack 700 g",
+        "price": 19,
+        "original_price": 19,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "tomato",
+      "category": "veg",
+      "name": "มะเขือเทศ",
+      "name_en": "Tomato",
+      "search": "มะเขือเทศ",
+      "result": {
+        "title": "เอโร่ มะเขือเทศราชินี 500 ก.",
+        "title_en": "ARO Honey Queen Tomato 500 g",
+        "price": 49,
+        "original_price": 49,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "sweet-potato",
+      "category": "veg",
+      "name": "มันเทศ",
+      "name_en": "Sweet potato",
+      "search": "มันเทศ",
+      "result": {
+        "title": "มันเทศไทยสีม่วง แพ็ค 1 กก.",
+        "title_en": "Thai Sweet Potato Pack 1 kg",
+        "price": 59,
+        "original_price": 59,
+        "unit": "1 unit(s)",
+        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "riceberry",
+      "category": "staple",
+      "name": "ข้าวไรซ์เบอร์รี่",
+      "name_en": "Riceberry rice",
+      "search": "ข้าวไรซ์เบอร์รี่",
+      "result": {
+        "title": "เนเชอเรลออร์แกนิค ข้าวไรซ์เบอร์รี่ แบบกล่อง 1กิโลกรัม x2 กล่อง",
+        "title_en": "เนเชอเรลออร์แกนิค ข้าวไรซ์เบอร์รี่ แบบกล่อง 1กิโลกรัม x2 กล่อง",
+        "price": 270,
+        "original_price": 270,
+        "unit": "2 box(es)",
+        "category": "",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "jasmine-rice",
+      "category": "staple",
+      "name": "ข้าวหอมมะลิ",
+      "name_en": "Jasmine rice",
+      "search": "ข้าวหอมมะลิ",
+      "result": {
+        "title": "ตราฉัตร ข้าวหอมมะลิใหม่ 100% 5 กก.",
+        "title_en": "ROYAL UMBRELLA Jasmine Rice (New) 100% 5 kg",
+        "price": 227,
+        "original_price": 227,
+        "unit": "1 unit(s)",
+        "category": "dry-grocery/grains-rice-cereal/fragrant-rice",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "oyster-sauce",
+      "category": "staple",
+      "name": "ซอสหอยนางรม",
+      "name_en": "Oyster sauce",
+      "search": "ซอสหอยนางรม",
+      "result": {
+        "title": "แม่ครัว ซอสหอยนางรม 600 มล. x 3",
+        "title_en": "MAEKRUA Oyster Sauce 600 ml x 3",
+        "price": 154,
+        "original_price": 154,
+        "unit": "3 unit(s)",
+        "category": "dry-grocery/sauce-seasoning/oyster-sauce",
+        "in_stock": true
+      }
+    },
+    {
+      "id": "cooking-oil",
+      "category": "staple",
+      "name": "น้ำมันประกอบอาหาร",
+      "name_en": "Cooking oil",
+      "search": "น้ำมันพืช",
+      "result": {
+        "title": "โบนัส น้ํามันปาล์ม 5 ล.",
+        "title_en": "BONUS Palm Oil 5 l",
+        "price": 252,
+        "original_price": 252,
+        "unit": "1 unit(s)",
+        "category": "dry-grocery/cooking-oil-vinegar/palm-oil",
+        "in_stock": true
+      }
+    }
+  ]
+}

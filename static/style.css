@@ -213,6 +213,16 @@ hr{border:0;border-top:1px solid var(--border);margin:20px 0}
 .grocery-item.done span{text-decoration:line-through;color:var(--muted)}
 #goalLine{margin:0 0 14px}
 
+/* Price list */
+.price-group{margin-bottom:14px}
+.price-list{display:flex;flex-direction:column;gap:8px}
+.price-item{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--surface-soft);border-radius:var(--r-sm);padding:10px 14px;flex-wrap:wrap}
+.price-info b{color:var(--text);font-size:14px}
+.price-info small{display:block;color:var(--muted);font-size:12px;max-width:440px}
+.price-val{text-align:right;font-weight:800;color:var(--primary-deep);font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.price-val small{display:block;color:var(--muted);font-size:11px;font-weight:600}
+.price-val.muted-val{color:var(--muted)}
+
 /* File picker styled as button */
 .file-btn{display:inline-block;margin:0;cursor:pointer;text-align:center}
 .file-btn input{display:none}
