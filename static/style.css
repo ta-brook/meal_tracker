@@ -50,16 +50,123 @@ h1,h2,h3{text-wrap:balance}
 #userGf.active{background:var(--jingjing-soft);border-color:var(--jingjing);color:#8A4F3A}
 
 /* Layout */
-.container{width:min(1120px,94%);margin:22px auto 60px}
+.container{width:min(1120px,94%);margin:22px auto 80px}
+
+/* Bottom navigation */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);
+  display:flex;justify-content:space-around;align-items:center;
+  padding:8px 0 max(8px,env(safe-area-inset-bottom));
+  box-shadow:0 -2px 12px rgba(80,80,70,.08);
+  z-index:100;
+}
+.nav-item{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  cursor:pointer;padding:4px 12px;
+  color:var(--muted);
+  transition:color .15s;
+}
+.nav-item svg{
+  width:22px;height:22px;
+  stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.01em}
+.nav-item.active{color:var(--primary-deep)}
+.nav-item:active{transform:scale(.95)}
+
+/* Stat cards row */
+.stat-row{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:10px;padding:0 0 14px;
+}
+.stat-card{
+  background:var(--surface);
+  border-radius:var(--r-md);
+  padding:14px 8px 12px;
+  text-align:center;
+  box-shadow:var(--shadow-sm);
+  cursor:pointer;
+  transition:transform .12s var(--ease);
+}
+.stat-card:active{transform:scale(.96)}
+.stat-icon{
+  width:24px;height:24px;margin:0 auto 6px;
+  stroke:var(--primary);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.stat-value{
+  font-size:18px;font-weight:700;
+  color:var(--primary-deep);
+  font-variant-numeric:tabular-nums;
+}
+.stat-label{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;letter-spacing:.02em}
+
+/* Section preview cards */
+.section-card{
+  background:var(--surface);
+  border-radius:var(--r-md);
+  padding:16px;
+  box-shadow:var(--shadow-sm);
+  margin-bottom:14px;
+}
+.section-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;
+}
+.section-title{font-size:15px;font-weight:700;color:var(--text)}
+.view-all{
+  color:var(--danger-deep);
+  font-size:12px;font-weight:600;
+  cursor:pointer;
+  text-decoration:none;
+}
+.view-all:hover{text-decoration:underline}
+
+/* Budget bar */
+.budget-bar-wrap{margin-bottom:12px}
+.budget-bar-labels{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--muted);margin-bottom:4px;
+}
+.budget-bar{
+  height:6px;background:var(--surface-tint);
+  border-radius:999px;overflow:hidden;
+}
+.budget-bar-fill{
+  height:100%;background:var(--primary);
+  border-radius:999px;transition:width .3s var(--ease);
+}
+
+/* Profile menu */
+.profile-menu{
+  background:var(--surface);
+  border-radius:var(--r-md);
+  padding:8px 0;
+  box-shadow:var(--shadow-sm);
+  margin-bottom:14px;
+}
+.profile-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;
+  cursor:pointer;
+  transition:background .12s;
+}
+.profile-item:hover{background:var(--surface-soft)}
+.profile-label{font-size:14px;color:var(--text);font-weight:600}
+.profile-value{font-size:12px;color:var(--muted)}
 
 /* Home hub cards */
 .hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-bottom:18px}
 .hub-card{border:1px solid var(--border);background:var(--surface);border-radius:var(--r-md);padding:14px;cursor:pointer;text-align:left;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:3px;font-family:var(--font);transition:transform .12s var(--ease),box-shadow .12s}
 .hub-card:hover{transform:translateY(-2px)}
 .hub-card:active{transform:scale(.98)}
-.hub-card .hub-icon{font-size:22px}
 .hub-card b{color:var(--text);font-size:14px}
 .hub-card small{color:var(--muted);font-size:12px}
+
+/* Item tags for previews */
+.item-tag{background:var(--surface-tint);padding:3px 8px;border-radius:999px;font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
 
 /* Shopping */
 .shop-add{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
