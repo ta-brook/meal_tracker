@@ -29,6 +29,7 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
 - `book/state.json`, `jingjing/state.json`, `meals.json` — the live data **on GitHub** (repo-root paths from `USER_FILES` + `MEALS_FILE`).
 - `data/book/state.json`, `data/jingjing/state.json`, `data/meals.json` — local fallback copies (GitHub not configured).
 - `vercel.json` — routes everything to `api/index.py`.
+- `sw.js` — PWA service worker. **Network-first** (cache fallback offline) for all same-origin GETs except `/api/*`; never cache-first, or installed clients pin stale `app.js`/`style.css`. Bump its `CACHE` name when stale assets must be purged.
 - `requirements.txt` — `Flask==3.1.0`, `openpyxl==3.1.5`.
 - `.github/workflows/validate.yml` — compiles the `api/` package and JSON-validates the state/shared-meal fallback files.
 
