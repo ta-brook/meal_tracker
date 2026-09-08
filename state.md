@@ -120,11 +120,8 @@ reaches the browser.
 ## PWA
 
 `manifest.json` (id, shortcuts → `/#page`, icons 192/512), `sw.js` (offline shell:
-network-first for everything same-origin — navigations, app shell and static assets —
-falling back to cache offline; `/api/*` never cached). Network-first assets (not
-cache-first) keep the installed PWA from pinning stale `app.js`/`style.css` after a
-deploy; bump the `CACHE` name in `sw.js` when a breaking asset change still lingers.
-Hash-based tab routing (`/#meals` etc.), "Install app" button in Settings.
+network-first navigations, cache-first assets, `/api/*` never cached), hash-based
+tab routing (`/#meals` etc.), "Install app" button in Settings.
 
 ## Design system
 
