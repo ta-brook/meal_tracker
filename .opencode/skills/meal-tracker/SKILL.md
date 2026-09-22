@@ -16,11 +16,13 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
   - `api/state.py` — user schema + deep validation/coercion, per-user read (`read_user(s)`), and atomic-friendly serialization.
   - `api/meals.py` — shared custom-meal library (`read_meals`, `normalize_meals`, `serialize`).
   - `api/catalog.py` — catalog CSV/XLSX read/write (`catalog_source`, `write_catalog`, `normalize_catalog_row`).
-  - `api/prices.py` — Makro PRO market prices: `ITEMS` list, `fetch_prices()` (parallel search of `search.maknet.siammakro.cloud`), `read_prices()`, `serialize()`.
-  - `api/shared.py` — household shared data: `SHARED_FILES` (shopping/calendar/finance/chores), per-key `read()`/`normalize()`/`serialize()`.
-- `templates/index.html` — single page, classic **top tab bar** (`.tabs`) with 11 tabs: Home, Meals, Plan, Prices, Shopping, Chores, Calendar, Mood, Finance, Progress, Settings. A bottom tab bar was tried and reverted.
-- `static/app.js` — vanilla JS state management and rendering; no build step, no framework.
-- `static/style.css` — pastel theme on CSS variables (tokens live in `.interface-design/system.md`).
+- `api/prices.py` — Makro PRO market prices: `ITEMS` list, `fetch_prices()` (parallel search of `search.maknet.siammakro.cloud`), `read_prices()`, `serialize()`.
+- `api/shared.py` — household shared data: `SHARED_FILES` (shopping/calendar/finance/chores), per-key `read()`/`normalize()`/`serialize()`.
+- **`api/import_handlers.py`** — **health data import**: parses Garmin CSV (sleep/activities/weight/HR/steps, auto-detected by headers) and Apple Health `export.xml`/`export.zip` (streaming iterparse for large files). `parse_csv()`, `parse_apple_health_xml()`, `merge_health_import()`.
+- **`api/strava_sync.py`** — **Strava auto-sync**: OAuth PKCE flow, token refresh, activity fetch, webhook processing. `exchange_code()`, `refresh_token()`, `sync_user()`, `activity_to_exercise()`, `build_auth_url()`.
+- `templates/index.html` — single page, classic **top tab bar** (`.tabs`) with 11 tabs: Home, Meals, Plan, Prices, Shopping, Chores, Calendar, Mood, Finance, Progress, Settings. A bottom tab bar was tried and reverted. New: activity/vitals card, weekly activity card, sleep stage stacked chart, Strava connect section.
+- `static/app.js` — vanilla JS state management and rendering; no build step, no framework. New: `renderActivity()`, `renderWeeklyActivity()`, `renderStravaStatus()`, `importHealthFile()`, updated `healthScore()` with sleep + activity dimensions.
+- `static/style.css` — pastel theme on CSS variables (tokens live in `.interface-design/system.md`). New: `.sleep-stack`, `.sleep-deep/light/rem/awake`, `.sleep-legend`.
 - `.interface-design/system.md` — design tokens (sage + cream + peach): palette, radius, spacing, depth, type.
 - `data/meals.csv` — meal catalog source of truth; `data/meals.xlsx` regenerated server-side on catalog writes.
 - `data/prices.json` — Makro PRO price snapshot (`{updated, items:[{id,category,name,search,result}]}`); refreshable.
@@ -43,17 +45,30 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
   "target": 2000,
   "goal": null,
   "age": null,
+  "height": null,
+  "protein_goal": null, "carbs_goal": null, "fat_goal": null,
   "meals": [],
   "logs": {},
-  "weights": []
+  "weights": [],
+  "water": {},
+  "moods": {},
+  "health": {"sleep": [], "exercise": [], "daily": {}},
+  "import_sources": {},
+  "strava": null
 }
 ```
 
 - `gender` is `"male"` or `"female"`. Defaults: target 2000 (male) / 1600 (female).
-- `age` is an optional nullable int (set in Settings) used only for the dashboard health-age estimate.
+- `age` is an optional nullable int (set in Settings) used for the dashboard health-age estimate.
 - `logs`: map of `"YYYY-MM-DD"` → array of meal ids. Planned ids look like `plan-<week>-<meal>-<gender>`; shared ids are `custom-<uuid>`.
 - `weights`: array of `{date, weight}`. `goal` nullable. `meals` is legacy (kept for migration, no longer used).
-- `normalize_user` (in `api/state.py`) deeply validates/coerces every field (gender enum, numeric target/goal/age, well-formed logs/weights) and never raises.
+- `water`: `{date: glasses}`. `moods`: `{date: mood_key}`.
+- **`health.sleep`**: `[{date, score, hours, deep, light, rem, awake}]` — imported sleep records.
+- **`health.exercise`**: `[{date, type, duration, distance, calories, hr_avg}]` — imported workouts.
+- **`health.daily`**: `{"YYYY-MM-DD": {steps, active_calories, resting_hr, avg_hr, max_hr, min_hr, distance}}` — daily aggregates from imports.
+- **`import_sources`**: `{"garmin": "ISO-timestamp", ...}` — timestamps of last import per source.
+- **`strava`**: `{access_token, refresh_token, expires_at, athlete_id}` — OAuth tokens for auto-sync.
+- `normalize_user` (in `api/state.py`) deeply validates/coerces every field (gender enum, numeric target/goal/age, well-formed logs/weights/health/import_sources) and never raises.
 
 **Shared meals** (`meals.json`): `{"meals": [{id, name, kcal, protein, carbs, fat}]}` — one library for the whole app. `findMeal(id)` checks shared meals first, then the catalog.
 
@@ -65,6 +80,11 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
 - `PUT|POST /api/state` accepts `{users, meals?, message}`; only files whose content actually changed are written (no-op saves are skipped).
 - Auth: optional shared `APP_PASSWORD` on data endpoints (`check_password`). `GET /api/meal-catalog` and downloads stay open.
 - Endpoints: `GET /` (page), `GET /sw.js`, `GET /manifest.json`, `GET /api/config`, `GET /api/state` (`{users, meals, shopping, calendar, finance, chores}`), `PUT|POST /api/state` (writes any changed shared files atomically), `GET|POST /api/meal-catalog` (GET open), `DELETE /api/meal-catalog`, `GET /api/prices` (open), `POST /api/prices/refresh` (auth + GitHub only), `GET /download/meals.csv`, `GET /download/meals.xlsx`.
+- **`POST /api/import/file`** — upload Garmin CSV or Apple Health ZIP/XML (multipart: `file`, `user`, `source`). Parses, merges deduplicated health data into the user's profile. Returns `{ok, summary, source}`.
+- **`GET /api/strava/auth`** — returns Strava OAuth URL for the user to connect.
+- **`GET /api/strava/callback`** — OAuth callback; exchanges code for tokens, stores them, redirects home.
+- **`POST /api/strava/sync`** — manual Strava sync for a user; fetches recent activities and merges them.
+- **`GET|POST /api/webhook/strava`** — webhook validation (GET) + event receiver (POST); auto-syncs activities on create/update.
 - The browser never receives the GitHub token; all GitHub I/O happens server-side.
 
 ## Meal catalog (`data/meals.csv`)
@@ -79,7 +99,7 @@ Columns: `week, meal, meal_name, gender, kcal, protein_g, carbs_g, fat_g, ingred
 - Rendering is imperative (`renderAll` → dashboard/meals/planView/progress/settings); `renderUserSwitch()` at the top of each render; escape user content with `esc()`.
 - **Save path (debounced, batched, robust):** `queueSave(msg)` → `migrate()` + `localSave()` immediately, records the action message, restarts a **30s trailing debounce** → `flushSave()`. `flushSave()` sends one `PUT /api/state` with `{users, meals, message}`. On **409** it retries once, then stashes `state` in `localStorage[KEY+"_backup"]`, reloads server state and warns; the Settings "Restore last backup" button re-applies it. A `pagehide` handler flushes pending changes via `fetch(..., keepalive)` (POST). `loadCloud()` clears pending messages on login.
 - Precise commit messages per action (e.g. `Log meal "…" for BOok`, `Add meal "…"`, `Log weight 70.2kg for jingjing`); batched actions join with `; `.
-- **Health score & health age (rule-based, no AI):** `healthScore()` in `static/app.js` computes a 0–10 score for the active user over the last 7 days from `consistency` (40%), `calorie` adherence (40%) and a `protein` floor (20%, `protein_g×4 ≥ 0.15×kcal`), with short feedback lines. The Dashboard's `#healthCard` renders a `conic-gradient` score ring, three breakdown bars, and `health age ≈ age − round((score−6)×1.5)` (only when `age` is set and ≥1 day logged). Pure derived data — nothing stored.
+- **Health score & health age (rule-based, no AI):** `healthScore()` in `static/app.js` computes a 0–10 score for the active user over the last 7 days from `consistency` (30%), `calorie` adherence (30%), `protein` floor (20%), **sleep** (10%, avg hours / 7.5), and **activity** (10%, steps + workout frequency). The Dashboard's `#healthCard` renders a `conic-gradient` score ring, five breakdown bars, and `health age ≈ age − round((score−6)×1.5)` (only when `age` is set and ≥1 day logged). Pure derived data — nothing stored.
 
 ## UI / design
 
@@ -88,6 +108,8 @@ Pastel "sage + cream + peach" theme. All colors, radius, spacing, depth and type
 ## Known limitations / obsolete ideas
 
 - **AI photo → calorie estimation** is obsolete and removed from the roadmap. Vision API costs are prohibitive for this project; manual meal logging remains the primary method.
+- **Garmin direct auto-sync is blocked** — Garmin has no consumer API; their Developer Program is partner-only and reportedly paused for new applicants (2026). The viable auto-sync path for workouts is the **Strava bridge** (both Garmin and Apple Watch can push to Strava).
+- **Apple Health auto-sync requires a native iOS app** — HealthKit is on-device only; there is no server-side REST API. File upload is the practical web-app path.
 
 ## Testing / running locally
 

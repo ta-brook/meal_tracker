@@ -1,9 +1,9 @@
 import json
 import urllib.error
 
-from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
+from flask import Flask, jsonify, redirect, render_template, request, send_file, send_from_directory
 
-from api import catalog, config, github, meals, prices, shared, state
+from api import catalog, config, github, import_handlers, meals, prices, shared, state, strava_sync
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
@@ -245,3 +245,183 @@ def download_xlsx():
         download_name="meals.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+@app.post("/api/import/file")
+def import_file():
+    """Import health data from an uploaded file (CSV or Apple Health ZIP/XML).
+
+    Form fields:
+      - file: the uploaded file
+      - user: "book" or "jingjing" (defaults to "book")
+      - source: optional source label (e.g. "garmin", "apple_health")
+    """
+    if not check_password():
+        return jsonify(error="Unauthorized"), 401
+
+    uploaded = request.files.get("file")
+    uid = str(request.form.get("user", "book")).strip()
+    source_label = str(request.form.get("source", "")).strip() or "upload"
+
+    if not uploaded or uploaded.filename == "":
+        return jsonify(error="file is required"), 400
+    if uid not in config.USER_FILES:
+        return jsonify(error="user must be book or jingjing"), 400
+
+    filename = uploaded.filename.lower()
+    try:
+        file_bytes = uploaded.read()
+        if filename.endswith(".csv"):
+            text = file_bytes.decode("utf-8", errors="replace")
+            result = import_handlers.parse_csv(text)
+        elif filename.endswith(".zip") or filename.endswith(".xml"):
+            result = import_handlers.parse_apple_health_xml(file_bytes)
+        else:
+            # Try CSV first, then XML
+            try:
+                text = file_bytes.decode("utf-8", errors="replace")
+                result = import_handlers.parse_csv(text)
+            except Exception:
+                result = import_handlers.parse_apple_health_xml(file_bytes)
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        return jsonify(error=f"Parse failed: {e}"), 400
+
+    # Read current user state, merge, and save
+    user, sha = state.read_user(uid)
+    summary = import_handlers.merge_health_import(user, result)
+
+    # Update import source metadata
+    from datetime import datetime, timezone
+    user.setdefault("import_sources", {})
+    user["import_sources"][source_label] = datetime.now(timezone.utc).isoformat()
+
+    rel = config.USER_FILES[uid]
+    new_content = json.dumps(user, ensure_ascii=False, indent=2)
+
+    try:
+        if config.persistent():
+            if github.read_file_text(rel) != new_content:
+                github.commit_files({rel: new_content}, f"Import {source_label} health data for {user['name']}")
+        else:
+            github.write_files_local({rel: new_content})
+        return jsonify(ok=True, summary=summary, source=result.get("type", "unknown"))
+    except RuntimeError as e:
+        if str(e) == "CONFLICT":
+            return _conflict()
+        return jsonify(error="Import save failed"), 500
+    except urllib.error.HTTPError as e:
+        if e.code == 409:
+            return _conflict()
+        return jsonify(error="Import save failed"), 500
+    except Exception:
+        return jsonify(error="Import save failed"), 500
+
+
+# --- Strava auto-sync ---
+
+@app.get("/api/strava/auth")
+def strava_auth_url():
+    """Return the Strava OAuth URL for the current user."""
+    if not check_password():
+        return jsonify(error="Unauthorized"), 401
+    if not config.STRAVA_CLIENT_ID:
+        return jsonify(error="Strava client ID is not configured"), 400
+    redirect_uri = request.args.get("redirect_uri", "").strip()
+    state_str = request.args.get("state", "").strip()
+    if not redirect_uri:
+        return jsonify(error="redirect_uri is required"), 400
+    try:
+        url = strava_sync.build_auth_url(redirect_uri, state_str=state_str)
+        return jsonify(url=url)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+
+@app.get("/api/strava/callback")
+def strava_callback():
+    """OAuth callback from Strava. Exchange code for tokens, store them, then redirect home."""
+    code = request.args.get("code", "").strip()
+    uid = request.args.get("state", "book").strip()
+    if not code:
+        return redirect("/?strava=error#settings")
+    if uid not in config.USER_FILES:
+        return redirect("/?strava=error#settings")
+
+    try:
+        token_data = strava_sync.exchange_code(code)
+    except Exception:
+        return redirect("/?strava=error#settings")
+
+    user, _ = state.read_user(uid)
+    user["strava"] = {
+        "access_token": token_data.get("access_token"),
+        "refresh_token": token_data.get("refresh_token"),
+        "expires_at": token_data.get("expires_at"),
+        "athlete_id": token_data.get("athlete", {}).get("id"),
+    }
+
+    rel = config.USER_FILES[uid]
+    new_content = json.dumps(user, ensure_ascii=False, indent=2)
+    try:
+        if config.persistent():
+            if github.read_file_text(rel) != new_content:
+                github.commit_files({rel: new_content}, f"Connect Strava for {user['name']}")
+        else:
+            github.write_files_local({rel: new_content})
+        return redirect("/?strava=connected#settings")
+    except Exception:
+        return redirect("/?strava=error#settings")
+
+
+@app.post("/api/strava/sync")
+def strava_manual_sync():
+    """Manually trigger a Strava sync for a user."""
+    if not check_password():
+        return jsonify(error="Unauthorized"), 401
+    body = request.get_json(force=True) or {}
+    uid = str(body.get("user", state.active_user or "book")).strip()
+    if uid not in config.USER_FILES:
+        return jsonify(error="user must be book or jingjing"), 400
+    try:
+        summary, error = strava_sync.sync_user(uid)
+        if error:
+            return jsonify(error=error), 400
+        return jsonify(ok=True, summary=summary)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+
+@app.route("/api/webhook/strava", methods=["GET", "POST"])
+def strava_webhook():
+    """Strava webhook subscription validation and event receiver."""
+    if request.method == "GET":
+        # Subscription validation
+        mode = request.args.get("hub.mode", "")
+        challenge = request.args.get("hub.challenge", "")
+        verify_token = request.args.get("hub.verify_token", "")
+        if mode == "subscribe" and verify_token == config.STRAVA_WEBHOOK_VERIFY_TOKEN:
+            return jsonify({"hub.challenge": challenge})
+        return jsonify(error="Invalid verification"), 403
+
+    if request.method == "POST":
+        # Event payload
+        payload = request.get_json(force=True) or {}
+        # Strava sends minimal payloads; we need to look up the user by athlete_id
+        # and queue a sync. For simplicity we just note the event.
+        owner_id = payload.get("owner_id")
+        object_type = payload.get("object_type")
+        aspect_type = payload.get("aspect_type")
+        if object_type == "activity" and aspect_type in ("create", "update"):
+            # Find user with matching athlete_id and sync
+            for uid in config.USER_FILES:
+                user, _ = state.read_user(uid)
+                strava_meta = user.get("strava") or {}
+                if strava_meta.get("athlete_id") == owner_id:
+                    try:
+                        strava_sync.sync_user(uid)
+                    except Exception:
+                        pass
+                    break
+        return jsonify(ok=True)

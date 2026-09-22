@@ -1,7 +1,7 @@
 let CATALOG = [], mealQuery = "", PRICES = {updated:null,items:[]};
 const THEME_ICON = {auto:"🌓",light:"☀️",dark:"🌙"};
 const KEY = "mealTrackerV4";
-const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{},moods:{},health:{sleep:[],exercise:[]}};
+const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{},moods:{},health:{sleep:[],exercise:[],daily:{}},import_sources:{}};
 let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],shopping:{items:[]},calendar:{events:[]},finance:{transactions:[],budgets:{}},chores:{chores:[]},active_user:"book"};
 let week = 1, password = sessionStorage.getItem("mealTrackerPassword") || "", persistent = false, auth = false;
 const $ = id => document.getElementById(id);
@@ -33,7 +33,9 @@ function migrate(){
     u.height ??= null; u.protein_goal ??= null; u.carbs_goal ??= null; u.fat_goal ??= null;
     u.water ||= {};
     u.moods ||= {};
-    u.health ||= {sleep:[],exercise:[]};
+    u.health ||= {sleep:[],exercise:[],daily:{}};
+    u.health.daily ||= {};
+    u.import_sources ||= {};
   }
   state.active_user ||= "book";
 }
@@ -120,7 +122,19 @@ function healthScore(){
   const consistency=dayData.length?loggedDays.length/dayData.length:0;
   const cal=loggedDays.length?loggedDays.reduce((a,x)=>a+(1-Math.min(1,Math.abs((x.t.kcal/u.target||0)-1))),0)/loggedDays.length:0;
   const protein=loggedDays.length?loggedDays.filter(x=>x.t.kcal>0&&x.t.protein*4>=0.15*x.t.kcal).length/loggedDays.length:0;
-  const score=Math.round((consistency*4+cal*4+protein*2)*10)/10;
+
+  // Sleep score (need >= 6h avg across logged sleep days)
+  const sleepDays=days.map(d=>{const s=(u.health?.sleep||[]).find(x=>x.date===d);return s&&s.hours>0?s.hours:0}).filter(h=>h>0);
+  const sleepAvg=sleepDays.length?sleepDays.reduce((a,b)=>a+b,0)/sleepDays.length:0;
+  const sleepScore=Math.min(1,sleepAvg/7.5);
+
+  // Activity score (need steps >= 6k or exercise on >= 4 of 7 days)
+  const exDays=days.filter(d=>(u.health?.exercise||[]).some(e=>e.date===d)).length;
+  const stepDays=days.map(d=>{const daily=(u.health?.daily||{})[d];return daily?.steps||0}).filter(s=>s>0);
+  const avgSteps=stepDays.length?stepDays.reduce((a,b)=>a+b,0)/stepDays.length:0;
+  const activityScore=Math.min(1,(exDays/4)+(avgSteps/12000));
+
+  const score=Math.round((consistency*3+cal*3+protein*2+sleepScore*1+Math.min(1,activityScore)*1)*10)/10;
   const fb=[];
   if(!loggedDays.length) fb.push("No meals logged this week — log a meal to build your score.");
   else{
@@ -130,7 +144,12 @@ function healthScore(){
     const ok=loggedDays.filter(x=>x.t.kcal>0&&x.t.protein*4>=0.15*x.t.kcal).length;
     if(ok<loggedDays.length) fb.push(`Protein met the floor on ${ok} of ${loggedDays.length} logged days — add chicken, eggs or tofu.`);
   }
-  return {score,consistency,calorie:cal,protein,fb,logged:loggedDays.length,days:dayData.length};
+  if(sleepAvg>0&&sleepAvg<6)fb.push(`Sleep averaged ${sleepAvg.toFixed(1)}h — aim for 7-8h.`);
+  else if(sleepAvg>=7)fb.push(`Great sleep average: ${sleepAvg.toFixed(1)}h.`);
+  if(avgSteps>0&&avgSteps<5000)fb.push(`Steps averaged ${Math.round(avgSteps)} — try to hit 7,000+.`);
+  else if(avgSteps>=7000)fb.push(`Active week: ~${Math.round(avgSteps)} steps/day.`);
+
+  return {score,consistency,calorie:cal,protein,sleep:sleepScore,activity:Math.min(1,activityScore),fb,logged:loggedDays.length,days:dayData.length};
 }
 function scoreLabel(s){return s>=8?"Excellent":s>=6?"Good":s>=4?"Fair":"Needs work"}
 function planMeals(){
@@ -171,11 +190,11 @@ function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
   $("todayLabel").textContent=d===today()?"Today":d;["kcal","protein","carbs","fat"].forEach((k,i)=>$( ["calTotal","proteinTotal","carbsTotal","fatTotal"][i]).textContent=Math.round(t[k]));$("calTarget").textContent=Math.round(user().target);$("calPercent").textContent=p+"%";$("calBar").style.width=p+"%";$("remainingText").textContent=t.kcal<=user().target?Math.round(user().target-t.kcal)+" kcal remaining":Math.round(t.kcal-user().target)+" kcal over target";$("planKcalBadge").textContent=`Week ${week} • ${Math.round(pk)} planned kcal`;
   const hs=healthScore(),ha=user().age!=null&&hs.logged>0?user().age-Math.round((hs.score-6)*1.5):null;
-  $("healthCard").innerHTML=`<div class="health-ring" style="--p:${Math.round(hs.score*10)}%"><div class="health-ring-in"><b>${hs.score.toFixed(1)}</b><small>/10</small></div></div><div class="health-detail"><div class="health-head"><h3>7-Day Health</h3><span class="tag">${scoreLabel(hs.score)}</span></div><div class="health-bars"><div class="hrow"><span>Consistency</span><div class="hbar"><i style="width:${Math.round(hs.consistency*100)}%"></i></div><b>${hs.logged}/${hs.days}</b></div><div class="hrow"><span>Calories</span><div class="hbar"><i style="width:${Math.round(hs.calorie*100)}%"></i></div><b>${Math.round(hs.calorie*100)}%</b></div><div class="hrow"><span>Protein</span><div class="hbar"><i style="width:${Math.round(hs.protein*100)}%"></i></div><b>${Math.round(hs.protein*100)}%</b></div></div><p class="muted health-age">${ha!=null?`<b>Health age ~${ha}</b> — estimated from your 7-day data, not medical advice.`:user().age!=null?"Health age needs at least 7 days of logs.":"Set your age in Settings to see your health age."}</p><ul class="health-fb">${hs.fb.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  $("healthCard").innerHTML=`<div class="health-ring" style="--p:${Math.round(hs.score*10)}%"><div class="health-ring-in"><b>${hs.score.toFixed(1)}</b><small>/10</small></div></div><div class="health-detail"><div class="health-head"><h3>7-Day Health</h3><span class="tag">${scoreLabel(hs.score)}</span></div><div class="health-bars"><div class="hrow"><span>Consistency</span><div class="hbar"><i style="width:${Math.round(hs.consistency*100)}%"></i></div><b>${hs.logged}/${hs.days}</b></div><div class="hrow"><span>Calories</span><div class="hbar"><i style="width:${Math.round(hs.calorie*100)}%"></i></div><b>${Math.round(hs.calorie*100)}%</b></div><div class="hrow"><span>Protein</span><div class="hbar"><i style="width:${Math.round(hs.protein*100)}%"></i></div><b>${Math.round(hs.protein*100)}%</b></div><div class="hrow"><span>Sleep</span><div class="hbar"><i style="width:${Math.round(hs.sleep*100)}%"></i></div><b>${Math.round(hs.sleep*100)}%</b></div><div class="hrow"><span>Activity</span><div class="hbar"><i style="width:${Math.round(hs.activity*100)}%"></i></div><b>${Math.round(hs.activity*100)}%</b></div></div><p class="muted health-age">${ha!=null?`<b>Health age ~${ha}</b> — estimated from your 7-day data, not medical advice.`:user().age!=null?"Health age needs at least 7 days of logs.":"Set your age in Settings to see your health age."}</p><ul class="health-fb">${hs.fb.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;const streak=loggingStreak();$("streakTag").textContent=streak>1?`🔥 ${streak}-day streak`:streak===1?"🔥 Logged today":"";
-  renderPlate(d,p);macroHtml();renderWater();renderHub(d);renderHomeChores();renderHealthSummary();
+  renderPlate(d,p);macroHtml();renderWater();renderActivity();renderWeeklyActivity();renderHub(d);renderHomeChores();renderHealthSummary();
 }
 const PLATE_FOOD=["🥗","🍗","🍚","🥩","🍜","🥦","🍤","🍛"];
 function renderPlate(d,p){
@@ -197,6 +216,60 @@ function macroHtml(){
 function renderWater(){const d=$("datePicker").value||today(),c=user().water[d]||0;$("waterCount").textContent=c;$("waterLabel").textContent=`${c} glass${c===1?"":"es"}`}
 function logWater(delta){const d=$("datePicker").value||today();user().water[d]=Math.max(0,(user().water[d]||0)+delta);queueSave(`Log ${user().water[d]} glasses of water for ${user().name}`);renderAll()}
 $("waterPlus").onclick=()=>logWater(1);$("waterMinus").onclick=()=>logWater(-1);
+
+function renderActivity(){
+  const d=$("datePicker").value||today();
+  const daily=user().health?.daily||{};
+  const data=daily[d];
+  const card=$("activityCard");
+  if(!card)return;
+  if(!data){card.style.display="none";return}
+  card.style.display="";
+  $("activityDateLabel").textContent=d===today()?"Today":d;
+  const stats=[];
+  if(data.steps!=null)stats.push(`<article class="stat"><span>Steps</span><strong>${Math.round(data.steps).toLocaleString()}</strong><small>steps</small></article>`);
+  if(data.active_calories!=null)stats.push(`<article class="stat"><span>Active burn</span><strong>${Math.round(data.active_calories)}</strong><small>kcal</small></article>`);
+  if(data.resting_hr!=null)stats.push(`<article class="stat"><span>Resting HR</span><strong>${Math.round(data.resting_hr)}</strong><small>bpm</small></article>`);
+  if(data.avg_hr!=null)stats.push(`<article class="stat"><span>Avg HR</span><strong>${Math.round(data.avg_hr)}</strong><small>bpm</small></article>`);
+  if(data.distance!=null)stats.push(`<article class="stat"><span>Distance</span><strong>${data.distance}</strong><small>km</small></article>`);
+  $("activityStats").innerHTML=stats.join("")||'<p class="muted">No activity data for this day.</p>';
+  // Calories out vs in bar
+  const mealKcal=totals(d).kcal;
+  const burn=data.active_calories||0;
+  if(burn>0&&mealKcal>0){
+    const ratio=Math.min(100,Math.round(burn/mealKcal*100));
+    $("activityBurn").innerHTML=`<div class="hrow"><span>Burned vs eaten</span><div class="hbar"><i style="width:${ratio}%"></i></div><b>${ratio}%</b></div>`;
+  }else{$("activityBurn").innerHTML=""}
+}
+
+function renderWeeklyActivity(){
+  const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);return dt.toISOString().slice(0,10)});
+  const daily=user().health?.daily||{};
+  const sleep=user().health?.sleep||[];
+  const exercise=user().health?.exercise||[];
+  const card=$("weeklyActivityCard");
+  if(!card)return;
+
+  const stepVals=days.map(d=>daily[d]?.steps||0).filter(s=>s>0);
+  const burnVals=days.map(d=>daily[d]?.active_calories||0).filter(c=>c>0);
+  const sleepVals=days.map(d=>{const s=sleep.find(x=>x.date===d);return s?s.hours:0}).filter(h=>h>0);
+  const workoutCount=days.filter(d=>exercise.some(e=>e.date===d)).length;
+
+  const hasData=stepVals.length||burnVals.length||sleepVals.length||workoutCount;
+  if(!hasData){card.style.display="none";return}
+  card.style.display="";
+
+  const totalSteps=stepVals.reduce((a,b)=>a+b,0);
+  const totalBurn=burnVals.reduce((a,b)=>a+b,0);
+  const avgSleep=sleepVals.length?(sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length):0;
+
+  const stats=[];
+  if(stepVals.length)stats.push(`<article class="stat"><span>Steps</span><strong>${Math.round(totalSteps).toLocaleString()}</strong><small>${Math.round(totalSteps/stepVals.length).toLocaleString()}/day</small></article>`);
+  if(burnVals.length)stats.push(`<article class="stat"><span>Burned</span><strong>${Math.round(totalBurn)}</strong><small>kcal total</small></article>`);
+  if(sleepVals.length)stats.push(`<article class="stat"><span>Sleep</span><strong>${avgSleep.toFixed(1)}</strong><small>h avg</small></article>`);
+  if(workoutCount)stats.push(`<article class="stat"><span>Workouts</span><strong>${workoutCount}</strong><small>days</small></article>`);
+  $("weeklyActivity").innerHTML=stats.join("");
+}
 function meals(){
   renderUserSwitch();const d=$("datePicker").value||today(),q=(mealQuery||"").trim().toLowerCase();
   const custom=state.meals.filter(m=>!q||(m.name||"").toLowerCase().includes(q));
@@ -290,6 +363,20 @@ function progress(){
   if(sleep.length){
     const smax=Math.max(...sleep.map(s=>s.hours||0),1),smin=Math.min(...sleep.map(s=>s.hours||0),smax);
     $("sleepChart").innerHTML=sleep.slice(-14).map(s=>`<div class="bar-wrap"><div class="bar" title="${s.date}: ${s.hours}h" style="height:${smax===smin?55:15+(s.hours-smin)/(smax-smin)*70}%"></div><div class="bar-label">${s.date.slice(5)}</div></div>`).join("");
+    // Sleep stage stacked chart
+    const stageSleep=sleep.slice(-14).filter(s=>s.deep>0||s.light>0||s.rem>0||s.awake>0);
+    if(stageSleep.length){
+      $("sleepStageChart").style.display="flex";
+      $("sleepStageChart").innerHTML=stageSleep.map(s=>{
+        const total=(s.deep||0)+(s.light||0)+(s.rem||0)+(s.awake||0)||1;
+        const pct=v=>Math.max(0,Math.round((v||0)/total*100));
+        return `<div class="bar-wrap"><div class="sleep-stack" title="${s.date}: ${s.hours}h total"><div class="sleep-awake" style="height:${pct(s.awake)}%"></div><div class="sleep-rem" style="height:${pct(s.rem)}%"></div><div class="sleep-light" style="height:${pct(s.light)}%"></div><div class="sleep-deep" style="height:${pct(s.deep)}%"></div></div><div class="bar-label">${s.date.slice(5)}</div></div>`;
+      }).join("");
+      $("sleepLegend").innerHTML=`<span><i class="sleep-deep"></i>Deep</span><span><i class="sleep-light"></i>Light</span><span><i class="sleep-rem"></i>REM</span><span><i class="sleep-awake"></i>Awake</span>`;
+    }else{
+      $("sleepStageChart").style.display="none";
+      $("sleepLegend").innerHTML="";
+    }
     $("sleepList").innerHTML=sleep.slice().reverse().map(s=>`<div class="list-item"><span>${s.date}</span><b>${s.hours}h</b><small>score ${Math.round(s.score)}${s.deep?` • deep ${s.deep}m`:""}</small></div>`).join("");
   }
   // Exercise
@@ -302,8 +389,12 @@ function progress(){
 function settings(){
   renderUserSwitch();
   $("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("heightInput").value=user().height??"";$("proteinGoal").value=user().protein_goal??"";$("carbsGoal").value=user().carbs_goal??"";$("fatGoal").value=user().fat_goal??"";$("passwordInput").value=password;
-  const h=user().health||{sleep:[],exercise:[]};
-  $("healthImportSummary").textContent=`${h.sleep.length} sleep records • ${h.exercise.length} exercise records`;
+  const h=user().health||{sleep:[],exercise:[],daily:{}};
+  const dailyCount=Object.keys(h.daily||{}).length;
+  const src=user().import_sources||{};
+  const srcList=Object.entries(src).map(([k,v])=>`${k}: ${new Date(v).toLocaleDateString()}`).join(", ");
+  $("healthImportSummary").textContent=`${h.sleep.length} sleep • ${h.exercise.length} workouts • ${dailyCount} daily metrics${srcList?` • last import: ${srcList}`:""}`;
+  renderStravaStatus();
 }
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;const h=$("heightInput").value;user().height=h?Math.max(1,Math.min(250,Math.round(n(h)))):null;const mg=id=>{const v=$(id).value;return v?Math.max(0,Math.round(n(v))):null};user().protein_goal=mg("proteinGoal");user().carbs_goal=mg("carbsGoal");user().fat_goal=mg("fatGoal");queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
@@ -322,71 +413,67 @@ let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;const b=$("installBtn");if(b)b.hidden=false});
 $("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true;toast("✓ App installed")};
 
-// --- Health data import (Garmin / Apple Health CSV) ---
-function parseCsv(text){
-  const lines=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim());
-  if(!lines.length)return[];
-  const headers=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/^["']|["']$/g,""));
-  return lines.slice(1).map(line=>{
-    const obj={};
-    const values=[];
-    let cur="",inQ=false;
-    for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){values.push(cur.trim());cur="";}else{cur+=ch;}}values.push(cur.trim());
-    headers.forEach((h,i)=>{obj[h]=values[i]!==undefined?values[i].replace(/^["']|["']$/g,""):"";});
-    return obj;
-  });
+// --- Health data import (Garmin / Apple Health) ---
+async function importHealthFile(file, source="upload"){
+  if(!file)return;
+  const form=new FormData();
+  form.append("file",file);
+  form.append("user",state.active_user||"book");
+  form.append("source",source);
+  try{
+    const r=await fetch("/api/import/file",{method:"POST",headers:password?{"X-App-Password":password}:{},body:form});
+    const data=await r.json();
+    if(!r.ok){toast(data.error||"Import failed",false);return null}
+    // Merge returned summary into local state optimistically
+    await loadCloud(); // reload server state so we have the merged data
+    renderAll();
+    const s=data.summary||{};
+    const parts=[];
+    if(s.sleep)parts.push(`${s.sleep} sleep`);
+    if(s.exercise)parts.push(`${s.exercise} workouts`);
+    if(s.weights)parts.push(`${s.weights} weights`);
+    if(s.daily)parts.push(`${s.daily} daily metrics`);
+    toast(parts.length?`✓ Imported ${parts.join(", ")} records`:"✓ Import complete — no new records");
+    return data;
+  }catch(err){toast("Import request failed",false);return null}
 }
-function importSleepCsv(text){
-  const rows=parseCsv(text);
-  if(!rows.length){toast("No rows found in sleep CSV",false);return 0;}
-  const mapped=[];
-  rows.forEach(r=>{
-    const date=(r.date||r["sleep date"]||r["date (yyyy-mm-dd)"]||r["start time"]||"").slice(0,10);
-    if(!date||date.length!==10)return;
-    const score=n(r.score||r["sleep score"]||r.quality||0);
-    const hours=n(r.hours||r["total sleep time (hrs)"]||r["sleep time"]||r.duration||0);
-    const deep=n(r.deep||r["deep sleep (min)"]||r["deep sleep"]||0);
-    const light=n(r.light||r["light sleep (min)"]||r["light sleep"]||0);
-    const rem=n(r.rem||r["rem sleep (min)"]||r["rem sleep"]||0);
-    const awake=n(r.awake||r["awake (min)"]||r.awake||0);
-    mapped.push({date,score,hours,deep,light,rem,awake});
-  });
-  const u=user();
-  u.health||={sleep:[],exercise:[]};
-  const seen=new Set(u.health.sleep.map(s=>s.date));
-  let added=0;
-  mapped.forEach(m=>{if(!seen.has(m.date)){seen.add(m.date);u.health.sleep.push(m);added++;}});
-  u.health.sleep.sort((a,b)=>a.date.localeCompare(b.date));
-  queueSave(`Import ${added} sleep records for ${u.name}`);
-  return added;
+$("importHealthFile").onchange=async e=>{const file=e.target.files[0];if(!file)return;await importHealthFile(file,"upload");e.target.value="";};
+$("clearHealthData").onclick=async()=>{if(!confirm("Clear all health data (sleep + exercise + daily) for this user?"))return;user().health={sleep:[],exercise:[],daily:{}};queueSave(`Clear health data for ${user().name}`);renderAll();toast("Health data cleared")};
+
+// --- Strava auto-sync UI ---
+function renderStravaStatus(){
+  const btnC=$("stravaConnectBtn"),btnS=$("stravaSyncBtn"),btnD=$("stravaDisconnectBtn"),st=$("stravaStatus");
+  const connected=!!user().strava?.access_token;
+  if(!persistent){st.textContent="Strava sync requires cloud persistence (GitHub).";btnC.hidden=true;btnS.hidden=true;btnD.hidden=true;return}
+  if(connected){
+    btnC.hidden=true;btnS.hidden=false;btnD.hidden=false;
+    st.textContent=`Connected • athlete ${user().strava.athlete_id||"—"}`;
+  }else{
+    btnC.hidden=false;btnS.hidden=true;btnD.hidden=true;
+    st.textContent="Not connected. Both Garmin and Apple Watch can sync to Strava.";
+  }
 }
-function importExerciseCsv(text){
-  const rows=parseCsv(text);
-  if(!rows.length){toast("No rows found in exercise CSV",false);return 0;}
-  const mapped=[];
-  rows.forEach(r=>{
-    const date=(r.date||r["activity date"]||r["date (yyyy-mm-dd)"]||r.start||"").slice(0,10);
-    if(!date||date.length!==10)return;
-    const type=str(r.type||r["activity type"]||r.activity||r.sport||"Other");
-    const duration=n(r.duration||r["duration (min)"]||r.time||0);
-    const distance=n(r.distance||r["distance (km)"]||0);
-    const calories=n(r.calories||r["calories (kcal)"]||r.energy||0);
-    const hr_avg=n(r.hr_avg||r["average hr"]||r["avg hr"]||r.hr||0);
-    mapped.push({date,type,duration,distance,calories,hr_avg});
-  });
-  const u=user();
-  u.health||={sleep:[],exercise:[]};
-  const seen=new Set(u.health.exercise.map(e=>e.date+e.type));
-  let added=0;
-  mapped.forEach(m=>{const key=m.date+m.type;if(!seen.has(key)){seen.add(key);u.health.exercise.push(m);added++;}});
-  u.health.exercise.sort((a,b)=>a.date.localeCompare(b.date));
-  queueSave(`Import ${added} exercise records for ${u.name}`);
-  return added;
-}
-function str(s){return String(s||"").trim()||"Other";}
-$("importSleepCsv").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const text=await file.text();const n=importSleepCsv(text);if(n){toast(`✓ Imported ${n} sleep records`);renderAll();}}catch(err){toast("Could not parse sleep CSV",false)}e.target.value="";};
-$("importExerciseCsv").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const text=await file.text();const n=importExerciseCsv(text);if(n){toast(`✓ Imported ${n} exercise records`);renderAll();}}catch(err){toast("Could not parse exercise CSV",false)}e.target.value="";};
-$("clearHealthData").onclick=async()=>{if(!confirm("Clear all health data (sleep + exercise) for this user?"))return;user().health={sleep:[],exercise:[]};queueSave(`Clear health data for ${user().name}`);renderAll();toast("Health data cleared")};
+$("stravaConnectBtn").onclick=async()=>{
+  const redirectUri=location.origin+"/api/strava/callback";
+  try{
+    const data=await api("/api/strava/auth?redirect_uri="+encodeURIComponent(redirectUri)+"&state="+encodeURIComponent(state.active_user||"book"));
+    if(data.url){location.href=data.url}
+    else{toast(data.error||"Could not get Strava auth URL",false)}
+  }catch(e){toast(e.message,false)}
+};
+$("stravaSyncBtn").onclick=async()=>{
+  try{
+    const data=await api("/api/strava/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:state.active_user})});
+    if(data.summary){toast(`✓ Synced ${data.summary.exercise||0} workouts`)}else{toast("✓ Synced")}
+    await loadCloud();renderAll();
+  }catch(e){toast(e.message,false)}
+};
+$("stravaDisconnectBtn").onclick=async()=>{
+  if(!confirm("Disconnect Strava?"))return;
+  delete user().strava;
+  queueSave(`Disconnect Strava for ${user().name}`);
+  renderAll();toast("Strava disconnected");
+};
 if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}))}
 const PRICE_GROUPS = {meat:["🥩","Meat & Protein"],veg:["🥬","Vegetables & Herbs"],staple:["🍚","Staples & Sauces"]};
 async function loadPrices(){try{PRICES=await api("/api/prices")}catch(e){PRICES={updated:null,items:[]}}}
@@ -527,5 +614,9 @@ async function boot(){
   await loadPrices();
   renderAll();
   tab((location.hash||"").replace("#","")||"dashboard");
+  // Strava OAuth callback toast
+  const sp=new URLSearchParams(location.search);
+  if(sp.get("strava")==="connected"){toast("✓ Strava connected");history.replaceState(null,"",location.pathname+location.hash)}
+  if(sp.get("strava")==="error"){toast("Strava connection failed",false);history.replaceState(null,"",location.pathname+location.hash)}
 }
 boot();

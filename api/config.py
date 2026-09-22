@@ -5,6 +5,11 @@ GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
+# Strava API (optional — for auto-syncing workouts from Garmin/Apple Watch via Strava)
+STRAVA_CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
+STRAVA_CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
+STRAVA_WEBHOOK_VERIFY_TOKEN = os.getenv("STRAVA_WEBHOOK_VERIFY_TOKEN", "mealtracker-webhook-secret")
+
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "..", "data")
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 

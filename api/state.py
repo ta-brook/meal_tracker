@@ -20,7 +20,8 @@ def empty_user(name, gender="male"):
         "weights": [],
         "water": {},
         "moods": {},
-        "health": {"sleep": [], "exercise": []},
+        "health": {"sleep": [], "exercise": [], "daily": {}},
+        "import_sources": {},
     }
 
 
@@ -143,7 +144,7 @@ def normalize_user(user, fallback):
     health = user.get("health")
     if not isinstance(health, dict):
         health = {}
-    user["health"] = {"sleep": [], "exercise": []}
+    user["health"] = {"sleep": [], "exercise": [], "daily": {}}
     for item in health.get("sleep") or []:
         if not isinstance(item, dict) or not item.get("date"):
             continue
@@ -167,6 +168,32 @@ def normalize_user(user, fallback):
             "calories": _num(item.get("calories")),
             "hr_avg": _num(item.get("hr_avg")),
         })
+
+    daily = health.get("daily")
+    if isinstance(daily, dict):
+        for date, metrics in daily.items():
+            if not isinstance(metrics, dict):
+                continue
+            clean = {}
+            for k, v in metrics.items():
+                if k in ("steps",):
+                    try:
+                        clean[k] = max(0, int(v))
+                    except (TypeError, ValueError):
+                        pass
+                else:
+                    try:
+                        clean[k] = float(v)
+                    except (TypeError, ValueError):
+                        pass
+            if clean:
+                user["health"]["daily"][str(date)] = clean
+
+    # Import source metadata (stores last import timestamps per source)
+    import_sources = user.get("import_sources")
+    if not isinstance(import_sources, dict):
+        import_sources = {}
+    user["import_sources"] = import_sources
 
     return user
 

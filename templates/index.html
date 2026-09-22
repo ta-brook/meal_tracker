@@ -90,6 +90,12 @@
         <button class="secondary small" id="waterPlus">+</button>
       </div>
     </div>
+    <!-- Activity & Vitals -->
+    <div class="card" id="activityCard" style="display:none">
+      <div class="card-title"><h3>⌚ Activity & Vitals</h3><span class="tag" id="activityDateLabel">—</span></div>
+      <div id="activityStats" class="stats"></div>
+      <div id="activityBurn" class="health-bars" style="margin-top:8px"></div>
+    </div>
     <div class="dashboard-grid">
       <div class="card plate-card">
         <div class="card-title">
@@ -125,6 +131,10 @@
           <span class="tag" id="streakTag"></span>
         </div>
         <div id="weeklySummary" class="week-summary"></div>
+      </div>
+      <div class="card" id="weeklyActivityCard" style="display:none">
+        <div class="card-title"><h3>📊 Weekly Activity</h3></div>
+        <div id="weeklyActivity" class="stats"></div>
       </div>
     </div>
     <div class="card">
@@ -318,6 +328,8 @@
     <div class="card" id="sleepCard" style="display:none">
       <div class="card-title"><h3>😴 Sleep</h3></div>
       <div id="sleepChart" class="chart"></div>
+      <div id="sleepStageChart" class="chart"></div>
+      <div class="sleep-legend" id="sleepLegend"></div>
       <div id="sleepList" class="list"></div>
     </div>
     <div class="card" id="exerciseCard" style="display:none">
@@ -353,12 +365,20 @@
       <div class="actions"><button class="secondary" id="exportData">⬇ Export data</button><label class="secondary file-btn">Import backup<input type="file" id="importData" accept=".json,application/json" hidden></label></div>
       <hr>
       <h3>Health Data Import</h3>
-      <p class="muted">Import sleep and exercise CSV exports from Garmin Connect or Apple Health.</p>
+      <p class="muted">Upload Garmin CSV exports or an Apple Health export.zip. The server parses and merges sleep, workouts, weight, steps, and heart rate into your profile.</p>
       <div class="actions">
-        <label class="secondary file-btn">Import sleep CSV<input type="file" id="importSleepCsv" accept=".csv" hidden></label>
-        <label class="secondary file-btn">Import exercise CSV<input type="file" id="importExerciseCsv" accept=".csv" hidden></label>
+        <label class="secondary file-btn">Import file<input type="file" id="importHealthFile" accept=".csv,.zip,.xml" hidden></label>
       </div>
       <p class="muted" id="healthImportSummary" style="margin-top:8px"></p>
+      <hr>
+      <h3>Strava Auto-Sync</h3>
+      <p class="muted">Connect Strava to auto-import workouts. Both Garmin and Apple Watch can sync to Strava.</p>
+      <div id="stravaConnectSection">
+        <button class="primary" id="stravaConnectBtn" hidden>Connect Strava</button>
+        <button class="secondary" id="stravaSyncBtn" hidden>⟳ Sync now</button>
+        <button class="danger" id="stravaDisconnectBtn" hidden>Disconnect</button>
+      </div>
+      <p class="muted" id="stravaStatus" style="margin-top:8px"></p>
       <hr>
       <h3>Cloud connection</h3>
       <label>App password<input id="passwordInput" type="password" autocomplete="current-password"></label>

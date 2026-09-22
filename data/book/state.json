@@ -13,5 +13,10 @@
   "weights": [],
   "water": {},
   "moods": {},
-  "health": {"sleep": [], "exercise": []}
+  "health": {
+    "sleep": [],
+    "exercise": [],
+    "daily": {}
+  },
+  "import_sources": {}
 }

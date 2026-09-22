@@ -9,7 +9,8 @@ the app; the skill (`.opencode/skills/meal-tracker/SKILL.md`) points here.
 - **What it is now:** a two-person household app (BOok / jingjing) that grew out
   of a meal tracker — meal logging, meal prep plan, market prices, shared
   shopping list, shared chores, shared calendar + daily mood, shared finance
-  with IOU + budgets, weight progress.
+  with IOU + budgets, weight progress, **health data import (Garmin/Apple Health)**,
+  **sleep stage charts**, **activity & vitals dashboard**, **Strava auto-sync**.
 - **Stack:** Flask (Python) on Vercel, vanilla-JS single-page frontend, no build
   step, no framework, no test suite. Data persists to GitHub via the Git Data
   API (atomic commits) with a local `data/` fallback.
@@ -19,21 +20,32 @@ the app; the skill (`.opencode/skills/meal-tracker/SKILL.md`) points here.
 ## Layout
 
 - `api/index.py` — Flask app + all routes, `check_password()`, conflict handling.
-- `api/config.py` — env vars, paths, `USER_FILES`, `MEALS_FILE`, `ROOT`, `persistent()`.
+- `api/config.py` — env vars, paths, `USER_FILES`, `MEALS_FILE`, `ROOT`, `persistent()`,
+  **Strava env vars** (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_WEBHOOK_VERIFY_TOKEN`).
 - `api/github.py` — `gh()`, `get_contents()`, `read_file_text()`,
   `write_files_local()`, `commit_files(changes, message)` (one atomic commit,
   Git Data API; 409 → retry once → `RuntimeError("CONFLICT")`).
 - `api/state.py` — user schema + deep validation/coercion (`normalize_user`),
-  `empty_user`, `read_user(s)`.
+  `empty_user`, `read_user(s)`. **Includes `health.daily` and `import_sources`.**
 - `api/meals.py` — shared custom-meal library (`read_meals`, `normalize_meals`, `serialize`).
 - `api/catalog.py` — catalog CSV/XLSX (`catalog_source`, `write_catalog`, `normalize_catalog_row`).
 - `api/prices.py` — Makro PRO prices: `ITEMS`, `fetch_prices()` (parallel search
   of `search.maknet.siammakro.cloud`), `read_prices()`, `serialize()`.
 - `api/shared.py` — household shared data: `SHARED_FILES` (shopping/calendar/
   finance/chores), per-key `read()`/`normalize()`/`serialize()`.
+- **`api/import_handlers.py`** — **NEW** — parses Garmin CSV (sleep/activities/weight/HR/steps)
+  and Apple Health `export.xml`/`export.zip` (streaming iterparse for large files).
+  `parse_csv()`, `parse_apple_health_xml()`, `merge_health_import()`.
+- **`api/strava_sync.py`** — **NEW** — Strava OAuth, token refresh, activity fetch,
+  webhook processing. `exchange_code()`, `refresh_token()`, `sync_user()`,
+  `activity_to_exercise()`, `build_auth_url()`.
 - `templates/index.html` — one page, 11 `<section id="...">` pages + top tabs.
+  **New: activity card, weekly activity card, sleep stage stacked chart, Strava section.**
 - `static/app.js` — imperative state + rendering; feature renderers live here.
+  **New: `renderActivity()`, `renderWeeklyActivity()`, `renderStravaStatus()`,
+  `importHealthFile()`, updated `healthScore()` with sleep + activity dimensions.**
 - `static/style.css` — pastel tokens + components; dark mode via `[data-theme="dark"]`.
+  **New: `.sleep-stack`, `.sleep-deep/light/rem/awake`, `.sleep-legend`.**
 - `.interface-design/system.md` — design tokens + "Today's plate" signature + dark mode.
 - `manifest.json`, `sw.js`, `static/icons/` — PWA.
 - `scripts/fetch_makro_prices.py` — refresh `data/prices.json` from Makro PRO.
@@ -56,7 +68,10 @@ by `normalize_user` (never raises):
   "logs": {},
   "weights": [],
   "water": {},
-  "moods": {}
+  "moods": {},
+  "health": {"sleep": [], "exercise": [], "daily": {}},
+  "import_sources": {},
+  "strava": null
 }
 ```
 
@@ -64,6 +79,11 @@ by `normalize_user` (never raises):
 - `water`: `{date: glasses}`. `moods`: `{date: mood_key}` — keys from
   `MOODS` (`great/good/ok/meh/bad/awful`), per-user, logged on the Mood page.
 - `meals` is legacy (migration only, unused). `goal`/`age`/`height`/macro goals nullable.
+- **`health.sleep`**: `[{date, score, hours, deep, light, rem, awake}]` — imported sleep records.
+- **`health.exercise`**: `[{date, type, duration, distance, calories, hr_avg}]` — imported workouts.
+- **`health.daily`**: `{"YYYY-MM-DD": {steps, active_calories, resting_hr, avg_hr, max_hr, min_hr, distance}}` — daily aggregates from imports.
+- **`import_sources`**: `{"garmin": "2026-09-22T...", "apple_health": "..."}` — timestamps of last import per source.
+- **`strava`**: `{access_token, refresh_token, expires_at, athlete_id}` — OAuth tokens for auto-sync.
 
 **Shared (repo-root on GitHub, `data/` local fallback):**
 - `meals.json` — `{"meals": [{id, name, kcal, protein, carbs, fat}]}` (shared library).
@@ -76,9 +96,12 @@ by `normalize_user` (never raises):
 
 ## Features / pages (top tabs)
 
-1. **Home** (`dashboard`) — day overview: stats, health score card, calorie bar,
-   macro-goal bars, water, "Today's plate" (animated), hub cards linking to each
-   section, "Today's chores" card, last-7-days, meals eaten today.
+1. **Home** (`dashboard`) — day overview: stats, health score card (now 5-dimensional:
+   consistency, calories, protein, **sleep, activity**), calorie bar,
+   macro-goal bars, water, **"Activity & Vitals" card** (steps, burn, HR, distance),
+   "Today's plate" (animated), hub cards, "Today's chores" card,
+   **"Weekly Activity" card** (7-day steps/burn/sleep/workouts summary),
+   last-7-days, meals eaten today.
 2. **Meals** — shared custom meals + editable catalog; add/edit/delete + search.
 3. **Plan** — 4-week prep plan per gender + grocery list (localStorage checks).
 4. **Prices** — Makro PRO snapshot grouped by meat/veg/staples + Refresh (GitHub mode).
@@ -89,9 +112,11 @@ by `normalize_user` (never raises):
 8. **Mood** — per-user 6-level emoji log + color-coded month summary.
 9. **Finance** — IOU (net unsettled by payer), monthly per-category budgets
    (auto-deducted), transaction list with settle/delete.
-10. **Progress** — weight chart, BMI, goal progress.
+10. **Progress** — weight chart, BMI, goal progress, **sleep chart + sleep stage stacked chart**,
+    exercise list.
 11. **Settings** — profile/targets/macro goals/height, theme, catalog downloads,
-    JSON backup export/import, cloud password, clear data.
+    JSON backup export/import, **health data file import (CSV/ZIP/XML)**,
+    **Strava connect/sync/disconnect**, cloud password, clear data.
 
 ## Save & sync
 
@@ -113,9 +138,34 @@ by `normalize_user` (never raises):
 - `GET|POST /api/meal-catalog`, `PUT /api/meal-catalog`, `DELETE /api/meal-catalog` (GET open; rest auth)
 - `GET /api/prices` (open), `POST /api/prices/refresh` (auth + GitHub only)
 - `GET /download/meals.csv`, `GET /download/meals.xlsx`
+- **`POST /api/import/file`** — **NEW** — upload CSV/ZIP/XML health data (multipart/form:
+  `file`, `user`, `source`). Returns `{ok, summary, source}`.
+- **`GET /api/strava/auth`** — **NEW** — returns Strava OAuth URL (auth required).
+- **`GET /api/strava/callback`** — **NEW** — OAuth callback; stores tokens; redirects to `/?strava=connected#settings`.
+- **`POST /api/strava/sync`** — **NEW** — manual sync; body `{user}`; returns `{ok, summary}`.
+- **`GET|POST /api/webhook/strava`** — **NEW** — webhook validation (GET) + event receiver (POST).
 
 Auth: optional shared `APP_PASSWORD` via `X-App-Password` header; token never
 reaches the browser.
+
+## Health data import
+
+**Supported formats:**
+- Garmin Connect CSV exports: sleep, activities, weight, heart rate, steps (auto-detected by column headers).
+- Apple Health `export.zip` or `export.xml`: weight, steps, heart rate, active calories,
+  distance, workouts, sleep stages. Uses streaming `iterparse` for memory efficiency.
+
+**Merge behavior:** deduplicated by date (sleep), date+type (exercise), date (weights),
+  date+metric key (daily counters are summed). Import source timestamps stored in
+  `user.import_sources`.
+
+## Strava auto-sync
+
+- Both Garmin and Apple Watch can sync activities to Strava.
+- User connects via OAuth; tokens stored per-user in `user.strava`.
+- Manual sync button + webhook endpoint for near-real-time updates.
+- Strava subscription required as of June 2026.
+- Activities are converted to the app's `health.exercise` schema.
 
 ## PWA
 
@@ -131,6 +181,12 @@ stats; soft layered shadows; borders only on inputs/dividers; `prefers-reduced-m
 honored. Dark mode = `[data-theme="dark"]` token overrides + header theme toggle
 (Auto/Light/Dark). Active top tab uses `--primary`.
 
+**New sleep-stage chart colors:**
+- Deep: `#5B6BA8` (dark blue)
+- Light: `#8FA4D3` (light blue)
+- REM: `#7FBF6E` (green)
+- Awake: `#D9A4B0` (pink)
+
 ## Conventions
 
 - No comments in code unless asked; match the dense single-line style.
@@ -139,6 +195,9 @@ honored. Dark mode = `[data-theme="dark"]` token overrides + header theme toggle
 - Add new features as: new `<section>` + renderer function + (if shared) a key in
   `api/shared.py` `SHARED_FILES`, wired into `tab()`, `renderAll()`, `migrate()`,
   `loadCloud()`, and the save payload.
+- **New convention:** health data features add keys to `user.health` and are
+  rendered via dedicated `render*()` functions; import features use `api/import_handlers.py`
+  for parsing and `merge_health_import()` for deduped merging.
 
 ## Verification (no test suite)
 
@@ -158,8 +217,16 @@ honored. Dark mode = `[data-theme="dark"]` token overrides + header theme toggle
 - **Bottom nav tried and reverted** (`e5b11ff`) — kept the top tab bar.
 - **Prices scrape** uses Makro PRO's search API; may break if their API changes.
 - Grocery-list checkboxes are localStorage-only (not server state).
+- **Garmin direct auto-sync is not possible** — Garmin has no consumer API and
+  their partner program is reportedly paused (2026). Strava bridge is the viable
+  auto-sync path for workouts.
+- **Apple Health auto-sync requires a native iOS app** — HealthKit is on-device only.
+  File upload is the practical web-app path.
 
 ## Future ideas (not built)
 
 - ~~AI photo → calorie estimation~~ **Obsolete** — removed from roadmap. Vision API costs are prohibitive; manual logging is sufficient.
 - Water/sleep/other trackers could extend the existing per-user maps.
+- Calorie target adjuster: "eat back" a percentage of active calories burned.
+- Trend arrows: week-over-week up/down indicators for weight, steps, sleep.
+- Sleep quality correlation: how sleep score affects health score.
