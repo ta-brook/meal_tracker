@@ -166,6 +166,7 @@ function tab(x){
 }
 function hashTab(){const x=(location.hash||"").replace("#","");if(TABS.includes(x))tab(x)}
 window.addEventListener("hashchange",hashTab);
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
   $("todayLabel").textContent=d===today()?"Today":d;["kcal","protein","carbs","fat"].forEach((k,i)=>$( ["calTotal","proteinTotal","carbsTotal","fatTotal"][i]).textContent=Math.round(t[k]));$("calTarget").textContent=Math.round(user().target);$("calPercent").textContent=p+"%";$("calBar").style.width=p+"%";$("remainingText").textContent=t.kcal<=user().target?Math.round(user().target-t.kcal)+" kcal remaining":Math.round(t.kcal-user().target)+" kcal over target";$("planKcalBadge").textContent=`Week ${week} • ${Math.round(pk)} planned kcal`;
