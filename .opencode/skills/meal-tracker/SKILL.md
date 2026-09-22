@@ -145,3 +145,12 @@ root) so the next session resumes cleanly:
    (e.g. `ses_...`).
 2. Write it into `SESSION.md` first line: `opencode -s <session-id>`.
 3. Commit and push `SESSION.md` along with any other final changes.
+
+**Resume scripts** (repo root) read `SESSION.md` and launch the correct session
+automatically — use these instead of typing the session id by hand:
+
+- **Git Bash / WSL / macOS / Linux:** `./resume.sh`
+- **PowerShell:** `.\resume.ps1`
+
+Both scripts parse the session id from `SESSION.md` and run `opencode -s <id>`
+from the repo root. Keep `SESSION.md` committed so the scripts always work.
