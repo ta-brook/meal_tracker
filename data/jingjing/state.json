@@ -3,7 +3,18 @@
   "gender": "female",
   "target": 1600,
   "goal": null,
+  "age": null,
+  "height": null,
+  "protein_goal": null,
+  "carbs_goal": null,
+  "fat_goal": null,
   "meals": [],
   "logs": {},
-  "weights": []
+  "weights": [],
+  "water": {},
+  "moods": {},
+  "health": {
+    "sleep": [],
+    "exercise": []
+  }
 }

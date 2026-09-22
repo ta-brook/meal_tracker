@@ -20,6 +20,7 @@ def empty_user(name, gender="male"):
         "weights": [],
         "water": {},
         "moods": {},
+        "health": {"sleep": [], "exercise": []},
     }
 
 
@@ -138,6 +139,34 @@ def normalize_user(user, fallback):
     for date, key in moods.items():
         if isinstance(key, str) and key:
             user["moods"][str(date)] = key[:12]
+
+    health = user.get("health")
+    if not isinstance(health, dict):
+        health = {}
+    user["health"] = {"sleep": [], "exercise": []}
+    for item in health.get("sleep") or []:
+        if not isinstance(item, dict) or not item.get("date"):
+            continue
+        user["health"]["sleep"].append({
+            "date": str(item["date"]),
+            "score": _num(item.get("score")),
+            "hours": _num(item.get("hours")),
+            "deep": _num(item.get("deep")),
+            "light": _num(item.get("light")),
+            "rem": _num(item.get("rem")),
+            "awake": _num(item.get("awake")),
+        })
+    for item in health.get("exercise") or []:
+        if not isinstance(item, dict) or not item.get("date"):
+            continue
+        user["health"]["exercise"].append({
+            "date": str(item["date"]),
+            "type": str(item.get("type") or "").strip() or "Other",
+            "duration": _num(item.get("duration")),
+            "distance": _num(item.get("distance")),
+            "calories": _num(item.get("calories")),
+            "hr_avg": _num(item.get("hr_avg")),
+        })
 
     return user
 

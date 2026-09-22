@@ -1,7 +1,7 @@
 let CATALOG = [], mealQuery = "", PRICES = {updated:null,items:[]};
 const THEME_ICON = {auto:"🌓",light:"☀️",dark:"🌙"};
 const KEY = "mealTrackerV4";
-const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{},moods:{}};
+const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{},moods:{},health:{sleep:[],exercise:[]}};
 let state = {users:{book:{...EMPTY,name:"BOok",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],shopping:{items:[]},calendar:{events:[]},finance:{transactions:[],budgets:{}},chores:{chores:[]},active_user:"book"};
 let week = 1, password = sessionStorage.getItem("mealTrackerPassword") || "", persistent = false, auth = false;
 const $ = id => document.getElementById(id);
@@ -33,6 +33,7 @@ function migrate(){
     u.height ??= null; u.protein_goal ??= null; u.carbs_goal ??= null; u.fat_goal ??= null;
     u.water ||= {};
     u.moods ||= {};
+    u.health ||= {sleep:[],exercise:[]};
   }
   state.active_user ||= "book";
 }
@@ -173,7 +174,7 @@ function dashboard(){
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;const streak=loggingStreak();$("streakTag").textContent=streak>1?`🔥 ${streak}-day streak`:streak===1?"🔥 Logged today":"";
-  renderPlate(d,p);macroHtml();renderWater();renderHub(d);renderHomeChores();
+  renderPlate(d,p);macroHtml();renderWater();renderHub(d);renderHomeChores();renderHealthSummary();
 }
 const PLATE_FOOD=["🥗","🍗","🍚","🥩","🍜","🥦","🍤","🍛"];
 function renderPlate(d,p){
@@ -271,8 +272,38 @@ $("openCatalogForm").onclick=()=>{
 };
 $("openWeightForm").onclick=weightForm;
 function weightForm(){openModal(`<h2>Log weight for ${esc(user().name)}</h2><form id="wf"><label>Date<input name="date" type="date" value="${today()}" required></label><label>Weight (kg)<input name="weight" type="number" min="1" step=".1" required></label><button class="primary">Save</button></form>`);$("wf").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);user().weights=user().weights.filter(x=>x.date!==f.get("date"));const w=n(f.get("weight"));user().weights.push({date:f.get("date"),weight:w});queueSave(`Log weight ${w}kg for ${user().name}`);closeModal();renderAll();toast("✓ Weight saved")}}
-function progress(){renderUserSwitch();const w=[...user().weights].sort((a,b)=>a.date.localeCompare(b.date)),cur=w.at(-1)?.weight,first=w[0]?.weight;$("currentWeight").textContent=cur??"—";$("goalWeight").textContent=user().goal??"—";$("weightChange").textContent=cur!=null&&first!=null?(cur-first).toFixed(1):"—";const r=w.filter(x=>Date.now()-new Date(x.date).getTime()<=604800000);$("avgWeight").textContent=r.length?(r.reduce((a,x)=>a+x.weight,0)/r.length).toFixed(1):"—";const h=user().height,bmi=cur!=null&&h?cur/Math.pow(h/100,2):null,goal=user().goal,line=[];if(bmi)line.push(`BMI ${bmi.toFixed(1)}`);if(cur!=null&&goal)line.push(cur>goal?`${(cur-goal).toFixed(1)} kg over goal`:`${(goal-cur).toFixed(1)} kg to goal`);$("goalLine").textContent=line.join(" • ");const max=Math.max(...w.map(x=>x.weight),1),min=Math.min(...w.map(x=>x.weight),max);$("weightChart").innerHTML=w.length?w.slice(-14).map(x=>`<div class="bar-wrap"><div class="bar" title="${x.date}: ${x.weight} kg" style="height:${max===min?55:15+(x.weight-min)/(max-min)*70}%"></div><div class="bar-label">${x.date.slice(5)}</div></div>`).join(""):"<p class=\"muted\">Log your first weight.</p>";$("weightList").innerHTML=w.slice().reverse().map(x=>`<div class="list-item"><span>${x.date}</span><b>${x.weight} kg</b></div>`).join("")||'<p class="muted">No weigh-ins.</p>'}
-function settings(){renderUserSwitch();$("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("heightInput").value=user().height??"";$("proteinGoal").value=user().protein_goal??"";$("carbsGoal").value=user().carbs_goal??"";$("fatGoal").value=user().fat_goal??"";$("passwordInput").value=password}
+function progress(){
+  renderUserSwitch();
+  const w=[...user().weights].sort((a,b)=>a.date.localeCompare(b.date)),cur=w.at(-1)?.weight,first=w[0]?.weight;
+  $("currentWeight").textContent=cur??"—";$("goalWeight").textContent=user().goal??"—";$("weightChange").textContent=cur!=null&&first!=null?(cur-first).toFixed(1):"—";
+  const r=w.filter(x=>Date.now()-new Date(x.date).getTime()<=604800000);$("avgWeight").textContent=r.length?(r.reduce((a,x)=>a+x.weight,0)/r.length).toFixed(1):"—";
+  const h=user().height,bmi=cur!=null&&h?cur/Math.pow(h/100,2):null,goal=user().goal,line=[];
+  if(bmi)line.push(`BMI ${bmi.toFixed(1)}`);if(cur!=null&&goal)line.push(cur>goal?`${(cur-goal).toFixed(1)} kg over goal`:`${(goal-cur).toFixed(1)} kg to goal`);
+  $("goalLine").textContent=line.join(" • ");
+  const max=Math.max(...w.map(x=>x.weight),1),min=Math.min(...w.map(x=>x.weight),max);
+  $("weightChart").innerHTML=w.length?w.slice(-14).map(x=>`<div class="bar-wrap"><div class="bar" title="${x.date}: ${x.weight} kg" style="height:${max===min?55:15+(x.weight-min)/(max-min)*70}%"></div><div class="bar-label">${x.date.slice(5)}</div></div>`).join(""):"<p class=\"muted\">Log your first weight.</p>";
+  $("weightList").innerHTML=w.slice().reverse().map(x=>`<div class="list-item"><span>${x.date}</span><b>${x.weight} kg</b></div>`).join("")||'<p class="muted">No weigh-ins.</p>';
+  // Sleep
+  const sleep=(user().health?.sleep||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const sleepCard=$("sleepCard");if(sleepCard)sleepCard.style.display=sleep.length?"":"none";
+  if(sleep.length){
+    const smax=Math.max(...sleep.map(s=>s.hours||0),1),smin=Math.min(...sleep.map(s=>s.hours||0),smax);
+    $("sleepChart").innerHTML=sleep.slice(-14).map(s=>`<div class="bar-wrap"><div class="bar" title="${s.date}: ${s.hours}h" style="height:${smax===smin?55:15+(s.hours-smin)/(smax-smin)*70}%"></div><div class="bar-label">${s.date.slice(5)}</div></div>`).join("");
+    $("sleepList").innerHTML=sleep.slice().reverse().map(s=>`<div class="list-item"><span>${s.date}</span><b>${s.hours}h</b><small>score ${Math.round(s.score)}${s.deep?` • deep ${s.deep}m`:""}</small></div>`).join("");
+  }
+  // Exercise
+  const ex=(user().health?.exercise||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const exCard=$("exerciseCard");if(exCard)exCard.style.display=ex.length?"":"none";
+  if(ex.length){
+    $("exerciseList").innerHTML=ex.slice().reverse().map(e=>`<div class="list-item"><span><b>${esc(e.type)}</b><br><small>${e.date}${e.duration?` • ${e.duration} min`:""}${e.distance?` • ${e.distance} km`:""}${e.calories?` • ${Math.round(e.calories)} kcal`:""}${e.hr_avg?` • HR ${Math.round(e.hr_avg)}`:""}</small></span></div>`).join("");
+  }
+}
+function settings(){
+  renderUserSwitch();
+  $("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("heightInput").value=user().height??"";$("proteinGoal").value=user().protein_goal??"";$("carbsGoal").value=user().carbs_goal??"";$("fatGoal").value=user().fat_goal??"";$("passwordInput").value=password;
+  const h=user().health||{sleep:[],exercise:[]};
+  $("healthImportSummary").textContent=`${h.sleep.length} sleep records • ${h.exercise.length} exercise records`;
+}
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"BOok":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;const h=$("heightInput").value;user().height=h?Math.max(1,Math.min(250,Math.round(n(h)))):null;const mg=id=>{const v=$(id).value;return v?Math.max(0,Math.round(n(v))):null};user().protein_goal=mg("proteinGoal");user().carbs_goal=mg("carbsGoal");user().fat_goal=mg("fatGoal");queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
 $("restoreBackup").onclick=async()=>{if(!confirm("Restore your last backed-up edits? This overwrites the current data."))return;try{const b=JSON.parse(localStorage.getItem(KEY+"_backup")||"null");if(!b?.users){toast("No backup found",false);return}state=b;migrate();localSave();queueSave("Restore last backup");renderAll();toast("✓ Backup restored")}catch(e){toast("Could not restore backup",false)}};
@@ -289,6 +320,72 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if((lo
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;const b=$("installBtn");if(b)b.hidden=false});
 $("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").hidden=true;toast("✓ App installed")};
+
+// --- Health data import (Garmin / Apple Health CSV) ---
+function parseCsv(text){
+  const lines=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim());
+  if(!lines.length)return[];
+  const headers=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/^["']|["']$/g,""));
+  return lines.slice(1).map(line=>{
+    const obj={};
+    const values=[];
+    let cur="",inQ=false;
+    for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){values.push(cur.trim());cur="";}else{cur+=ch;}}values.push(cur.trim());
+    headers.forEach((h,i)=>{obj[h]=values[i]!==undefined?values[i].replace(/^["']|["']$/g,""):"";});
+    return obj;
+  });
+}
+function importSleepCsv(text){
+  const rows=parseCsv(text);
+  if(!rows.length){toast("No rows found in sleep CSV",false);return 0;}
+  const mapped=[];
+  rows.forEach(r=>{
+    const date=(r.date||r["sleep date"]||r["date (yyyy-mm-dd)"]||r["start time"]||"").slice(0,10);
+    if(!date||date.length!==10)return;
+    const score=n(r.score||r["sleep score"]||r.quality||0);
+    const hours=n(r.hours||r["total sleep time (hrs)"]||r["sleep time"]||r.duration||0);
+    const deep=n(r.deep||r["deep sleep (min)"]||r["deep sleep"]||0);
+    const light=n(r.light||r["light sleep (min)"]||r["light sleep"]||0);
+    const rem=n(r.rem||r["rem sleep (min)"]||r["rem sleep"]||0);
+    const awake=n(r.awake||r["awake (min)"]||r.awake||0);
+    mapped.push({date,score,hours,deep,light,rem,awake});
+  });
+  const u=user();
+  u.health||={sleep:[],exercise:[]};
+  const seen=new Set(u.health.sleep.map(s=>s.date));
+  let added=0;
+  mapped.forEach(m=>{if(!seen.has(m.date)){seen.add(m.date);u.health.sleep.push(m);added++;}});
+  u.health.sleep.sort((a,b)=>a.date.localeCompare(b.date));
+  queueSave(`Import ${added} sleep records for ${u.name}`);
+  return added;
+}
+function importExerciseCsv(text){
+  const rows=parseCsv(text);
+  if(!rows.length){toast("No rows found in exercise CSV",false);return 0;}
+  const mapped=[];
+  rows.forEach(r=>{
+    const date=(r.date||r["activity date"]||r["date (yyyy-mm-dd)"]||r.start||"").slice(0,10);
+    if(!date||date.length!==10)return;
+    const type=str(r.type||r["activity type"]||r.activity||r.sport||"Other");
+    const duration=n(r.duration||r["duration (min)"]||r.time||0);
+    const distance=n(r.distance||r["distance (km)"]||0);
+    const calories=n(r.calories||r["calories (kcal)"]||r.energy||0);
+    const hr_avg=n(r.hr_avg||r["average hr"]||r["avg hr"]||r.hr||0);
+    mapped.push({date,type,duration,distance,calories,hr_avg});
+  });
+  const u=user();
+  u.health||={sleep:[],exercise:[]};
+  const seen=new Set(u.health.exercise.map(e=>e.date+e.type));
+  let added=0;
+  mapped.forEach(m=>{const key=m.date+m.type;if(!seen.has(key)){seen.add(key);u.health.exercise.push(m);added++;}});
+  u.health.exercise.sort((a,b)=>a.date.localeCompare(b.date));
+  queueSave(`Import ${added} exercise records for ${u.name}`);
+  return added;
+}
+function str(s){return String(s||"").trim()||"Other";}
+$("importSleepCsv").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const text=await file.text();const n=importSleepCsv(text);if(n){toast(`✓ Imported ${n} sleep records`);renderAll();}}catch(err){toast("Could not parse sleep CSV",false)}e.target.value="";};
+$("importExerciseCsv").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const text=await file.text();const n=importExerciseCsv(text);if(n){toast(`✓ Imported ${n} exercise records`);renderAll();}}catch(err){toast("Could not parse exercise CSV",false)}e.target.value="";};
+$("clearHealthData").onclick=async()=>{if(!confirm("Clear all health data (sleep + exercise) for this user?"))return;user().health={sleep:[],exercise:[]};queueSave(`Clear health data for ${user().name}`);renderAll();toast("Health data cleared")};
 if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}))}
 const PRICE_GROUPS = {meat:["🥩","Meat & Protein"],veg:["🥬","Vegetables & Herbs"],staple:["🍚","Staples & Sauces"]};
 async function loadPrices(){try{PRICES=await api("/api/prices")}catch(e){PRICES={updated:null,items:[]}}}
@@ -324,6 +421,18 @@ function renderHub(d){
   const mkey=monthKey(),openShop=(state.shopping.items||[]).filter(i=>!i.done).length,todayEvts=(state.calendar.events||[]).filter(e=>e.date===d).length,spent=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===mkey).reduce((a,t)=>a+(t.amount||0),0),chores=state.chores.chores||[],choresDone=chores.filter(c=>c.done&&c.done[d]).length,lastW=[...(user().weights||[])].sort((a,b)=>b.date.localeCompare(a.date))[0];
   const cards=[["meals","🍗","Meals",`${state.meals.length} custom`],["plan","📅","Plan",`Week ${week}`],["prices","🏷️","Prices",(PRICES.items||[]).filter(i=>i.result).length+" items"],["shopping","🛒","Shopping",`${openShop} open`],["calendar","📆","Calendar",`${todayEvts} today`],["chores","🧹","Chores",`${choresDone}/${chores.length} done`],["finance","💸","Finance",`฿${Math.round(spent)} mo`],["progress","📉","Progress",lastW?`${lastW.weight} kg`:"—"]];
   $("hubCards").innerHTML=cards.map(([p,ic,lb,st])=>`<button class="hub-card" onclick="tab('${p}')"><span class="hub-icon">${ic}</span><b>${lb}</b><small>${st}</small></button>`).join("");
+}
+function renderHealthSummary(){
+  const h=user().health||{sleep:[],exercise:[]};
+  const lastSleep=h.sleep.slice().sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
+  const lastEx=h.exercise.slice().sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
+  const card=$("healthSummaryCard");if(!card)return;
+  if(!lastSleep&&!lastEx){card.style.display="none";return;}
+  card.style.display="";
+  const stats=[];
+  if(lastSleep)stats.push(`<article class="stat"><span>Last sleep</span><strong>${lastSleep.hours||"—"}</strong><small>h${lastSleep.score?` • score ${Math.round(lastSleep.score)}`:""}</small></article>`);
+  if(lastEx)stats.push(`<article class="stat"><span>Last workout</span><strong>${esc(lastEx.type)}</strong><small>${lastEx.duration?`${lastEx.duration} min`:""}${lastEx.calories?` • ${Math.round(lastEx.calories)} kcal`:""}</small></article>`);
+  $("healthSummary").innerHTML=stats.join("");
 }
 function renderHomeChores(){
   const d=today(),chores=state.chores.chores||[],done=chores.filter(c=>c.done&&c.done[d]);
