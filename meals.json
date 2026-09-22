@@ -7,6 +7,14 @@
       "protein": 0.0,
       "carbs": 0.0,
       "fat": 0.0
+    },
+    {
+      "id": "custom-7f065f7f-beee-4404-9f4c-613fd3d2781c",
+      "name": "ผัดไทหมู",
+      "kcal": 600.0,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 0.0
     }
   ]
 }
