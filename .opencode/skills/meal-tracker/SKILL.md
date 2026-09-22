@@ -85,6 +85,10 @@ Columns: `week, meal, meal_name, gender, kcal, protein_g, carbs_g, fat_g, ingred
 
 Pastel "sage + cream + peach" theme. All colors, radius, spacing, depth and type tokens are CSS variables in `static/style.css`, documented in `.interface-design/system.md`. Nunito (Google Fonts) with system fallback; tabular numbers on stats; soft layered shadows (borders only on inputs/dividers); `prefers-reduced-motion` honored. When restyling, keep existing class names/IDs so the imperative JS renderers stay untouched.
 
+## Known limitations / obsolete ideas
+
+- **AI photo → calorie estimation** is obsolete and removed from the roadmap. Vision API costs are prohibitive for this project; manual meal logging remains the primary method.
+
 ## Testing / running locally
 
 There is no test suite. Verify by:

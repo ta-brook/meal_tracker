@@ -161,5 +161,5 @@ honored. Dark mode = `[data-theme="dark"]` token overrides + header theme toggle
 
 ## Future ideas (not built)
 
-- AI photo → calorie estimation (needs vision API key + server proxy; noted only).
+- ~~AI photo → calorie estimation~~ **Obsolete** — removed from roadmap. Vision API costs are prohibitive; manual logging is sufficient.
 - Water/sleep/other trackers could extend the existing per-user maps.
