@@ -18,11 +18,15 @@
     ]
   },
   "meals": [],
-  "moods": {},
+  "moods": {
+    "2026-09-22": "good"
+  },
   "name": "BOok",
   "protein_goal": null,
   "target": 2000,
-  "water": {},
+  "water": {
+    "2026-09-22": 2
+  },
   "weights": [
     {
       "date": "2026-09-22",
