@@ -1,4 +1,14 @@
 {
-  "transactions": [],
+  "transactions": [
+    {
+      "id": "tx-d1a1d0c1-ae92-48c9-8ee7-2c335074f13f",
+      "description": "ice americano",
+      "category": "food",
+      "amount": 75.0,
+      "paid_by": "book",
+      "date": "2026-09-22",
+      "settled": false
+    }
+  ],
   "budgets": {}
 }
