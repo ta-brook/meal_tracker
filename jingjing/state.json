@@ -1,9 +1,22 @@
 {
+  "age": null,
+  "carbs_goal": null,
+  "fat_goal": null,
   "gender": "female",
   "goal": null,
+  "health": {
+    "sleep": [],
+    "exercise": [],
+    "daily": {}
+  },
+  "height": null,
+  "import_sources": {},
   "logs": {},
   "meals": [],
+  "moods": {},
   "name": "jingjing",
+  "protein_goal": null,
   "target": 1600,
+  "water": {},
   "weights": []
 }

@@ -1,0 +1,12 @@
+{
+  "meals": [
+    {
+      "id": "custom-00e62439-8bfe-49f7-b8c2-37efaf141d2d",
+      "name": "test",
+      "kcal": 500.0,
+      "protein": 0.0,
+      "carbs": 0.0,
+      "fat": 0.0
+    }
+  ]
+}

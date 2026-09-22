@@ -1,20 +1,29 @@
 {
+  "age": null,
+  "carbs_goal": null,
+  "fat_goal": null,
   "gender": "male",
   "goal": null,
+  "health": {
+    "sleep": [],
+    "exercise": [],
+    "daily": {}
+  },
+  "height": null,
+  "import_sources": {},
   "logs": {
     "2026-09-03": []
   },
-  "meals": [
-    {
-      "id": "custom-00e62439-8bfe-49f7-b8c2-37efaf141d2d",
-      "name": "test",
-      "kcal": 500,
-      "protein": 0,
-      "carbs": 0,
-      "fat": 0
-    }
-  ],
+  "meals": [],
+  "moods": {},
   "name": "BOok",
+  "protein_goal": null,
   "target": 2000,
-  "weights": []
+  "water": {},
+  "weights": [
+    {
+      "date": "2026-09-22",
+      "weight": 90.0
+    }
+  ]
 }
