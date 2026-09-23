@@ -55,6 +55,20 @@ Dashboard stays Home.
 - Mobile-first; `@media(max-width:760px)` tuned; desktop keeps a sane max-width.
 - Keep `prefers-reduced-motion` support.
 
+## Current progress (last updated 2026-09-23)
+
+- ✅ Phase 0: Spec saved, GitHub ticket #6 created, skill updated with recurring workflow rules
+- ✅ Phase 1: Design tokens rewritten (red/maroon primary, warm off-white canvas, larger radius)
+- ✅ Phase 1: Global shell rebuilt — bottom nav (6 tabs), hero/app bar restyled, sub-tab system added
+- ✅ Phase 2: Home dashboard restyled (stats, health ring, plate, water, macros, weekly summary)
+- ✅ Phase 3: Calendar + Mood merged with Month/List/Mood sub-tabs
+- ✅ Phase 4: Finance redesigned (red-gradient hero card, frosted pending sub-cards, budget rows)
+- ✅ Phase 5: Meals/Plan/Profile pages restyled via shared component updates
+- ✅ Phase 6: Dark mode tokens updated, mobile responsive tuned, docs synced
+- ✅ Extra: Profile display name changed from "BOok" → "book" across codebase
+
+**Commits:** `1ceadeb` (redesign), `ec4b8d0` (skill push rule), `03ba893` (BOok→book)
+
 ## Files touched
 
 - `templates/index.html` — shell, bottom nav, page sections reorganized.
