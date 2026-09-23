@@ -4,7 +4,7 @@ Red / maroon primary on warm off-white. Updated in Ticket #6 to match the user-p
 
 ## Intent
 
-- **Human:** a couple (BOok, jingjing) logging meals and weights daily on desktop and phone — quick taps, calm glance.
+- **Human:** a couple (book, jingjing) logging meals and weights daily on desktop and phone — quick taps, calm glance.
 - **Feel:** warm, fresh, easy on the eyes. Soft like a food journal, not a dashboard.
 - **Signature:** deep red primary, large rounded cards, fixed bottom tab bar, red-gradient finance summary, calendar with Month/List/Mood sub-tabs.
 
@@ -20,7 +20,7 @@ Red / maroon primary on warm off-white. Updated in Ticket #6 to match the user-p
 | `--primary-deep` | `#A93226` | deep maroon — headings, hero numbers |
 | `--primary-soft` | `#F8E3DF` | soft red tint — tab hover, tags, ingredient chips |
 | `--accent` | `#E8A87C` | peach-orange — progress bars, gradients |
-| `--book` / `--book-soft` | `#AEC3E0` / `#E4EDF8` | BOok active pill |
+| `--book` / `--book-soft` | `#AEC3E0` / `#E4EDF8` | book active pill |
 | `--jingjing` / `--jingjing-soft` | `#E8B89E` / `#F9E7DC` | jingjing active pill |
 | `--text` | `#3B312E` | warm dark ink |
 | `--muted` | `#8B7D78` | secondary text |

@@ -1,10 +1,10 @@
-# Meal Tracker v4 — BOok + jingjing + shared meal library
+# Meal Tracker v4 — book + jingjing + shared meal library
 
-A simple Flask application for Vercel with two profiles: **BOok** and **jingjing**.
+A simple Flask application for Vercel with two profiles: **book** and **jingjing**.
 
 ## Highlights
 
-- Profile names are **BOok** and **jingjing**; each profile keeps its own logs, weights, calorie target, goal and quantity profile.
+- Profile names are **book** and **jingjing**; each profile keeps its own logs, weights, calorie target, goal and quantity profile.
 - **Custom meals are shared across the whole app** (one library for both profiles), stored in `meals.json`.
 - Planned meals come from the editable catalog at `data/meals.csv` (read at runtime) with a regenerated Excel copy at `data/meals.xlsx`.
 - **Saves are batched**: changes are applied locally immediately and flushed to GitHub once, 30 seconds after the last click (not on every click), with descriptive commit messages.
@@ -33,7 +33,7 @@ The Python API reads/writes files through the GitHub Contents / Git Data APIs. T
 - Every action updates the UI and `localStorage` instantly.
 - A 30-second trailing debounce batches edits; one `PUT /api/state` carries `{users, meals, message}`.
 - The backend writes only the files that actually changed, in **one atomic commit** (Git Data API) — either all files update or none.
-- Commit messages describe the change, e.g. `Log meal "กะเพราอกไก่บด" for BOok`, `Add meal "…"`, `Log weight 70.2kg for jingjing`.
+- Commit messages describe the change, e.g. `Log meal "กะเพราอกไก่บด" for book`, `Add meal "…"`, `Log weight 70.2kg for jingjing`.
 
 ## APP_PASSWORD
 

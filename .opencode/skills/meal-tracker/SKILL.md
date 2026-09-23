@@ -1,11 +1,11 @@
 ---
 name: meal-tracker
-description: Use when working on the Meal Tracker app — a Flask/Vercel meal-logging app for two users (BOok and jingjing). Covers the modular Flask backend in api/ (config, github, state, catalog, meals, index), the vanilla-JS frontend in static/app.js and templates/index.html, GitHub-backed data (book/state.json, jingjing/state.json, meals.json at repo root; data/ copies are the local fallback), the editable meal catalog (data/meals.csv + regenerated data/meals.xlsx), atomic Git-Data-API commits, debounced saves, the pastel UI tokens in .interface-design/system.md, and deploy/config. Trigger on any task involving meal tracking, state.json, meals.json, meals.csv, API endpoints, shared meals, saves/commits, profile switching, or deploy/config changes.
+description: Use when working on the Meal Tracker app — a Flask/Vercel meal-logging app for two users (book and jingjing). Covers the modular Flask backend in api/ (config, github, state, catalog, meals, index), the vanilla-JS frontend in static/app.js and templates/index.html, GitHub-backed data (book/state.json, jingjing/state.json, meals.json at repo root; data/ copies are the local fallback), the editable meal catalog (data/meals.csv + regenerated data/meals.xlsx), atomic Git-Data-API commits, debounced saves, the pastel UI tokens in .interface-design/system.md, and deploy/config. Trigger on any task involving meal tracking, state.json, meals.json, meals.csv, API endpoints, shared meals, saves/commits, profile switching, or deploy/config changes.
 ---
 
 # Meal Tracker v4
 
-A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing** (female). Custom meals are **shared app-wide** (one library for both profiles); planned meals come from the editable catalog.
+A Flask app deployed on Vercel for two profiles: **book** (male) and **jingjing** (female). Custom meals are **shared app-wide** (one library for both profiles); planned meals come from the editable catalog.
 
 ## Layout
 
@@ -40,7 +40,7 @@ A Flask app deployed on Vercel for two profiles: **BOok** (male) and **jingjing*
 
 ```json
 {
-  "name": "BOok",
+  "name": "book",
   "gender": "male",
   "target": 2000,
   "goal": null,
@@ -98,7 +98,7 @@ Columns: `week, meal, meal_name, gender, kcal, protein_g, carbs_g, fat_g, ingred
 - Keep IDs stable across frontend/backend: user keys, meal ids, catalog rows (`findMeal`, `planMeals`).
 - Rendering is imperative (`renderAll` → dashboard/meals/planView/progress/settings); `renderUserSwitch()` at the top of each render; escape user content with `esc()`.
 - **Save path (debounced, batched, robust):** `queueSave(msg)` → `migrate()` + `localSave()` immediately, records the action message, restarts a **30s trailing debounce** → `flushSave()`. `flushSave()` sends one `PUT /api/state` with `{users, meals, message}`. On **409** it retries once, then stashes `state` in `localStorage[KEY+"_backup"]`, reloads server state and warns; the Settings "Restore last backup" button re-applies it. A `pagehide` handler flushes pending changes via `fetch(..., keepalive)` (POST). `loadCloud()` clears pending messages on login.
-- Precise commit messages per action (e.g. `Log meal "…" for BOok`, `Add meal "…"`, `Log weight 70.2kg for jingjing`); batched actions join with `; `.
+- Precise commit messages per action (e.g. `Log meal "…" for book`, `Add meal "…"`, `Log weight 70.2kg for jingjing`); batched actions join with `; `.
 - **Health score & health age (rule-based, no AI):** `healthScore()` in `static/app.js` computes a 0–10 score for the active user over the last 7 days from `consistency` (30%), `calorie` adherence (30%), `protein` floor (20%), **sleep** (10%, avg hours / 7.5), and **activity** (10%, steps + workout frequency). The Dashboard's `#healthCard` renders a `conic-gradient` score ring, five breakdown bars, and `health age ≈ age − round((score−6)×1.5)` (only when `age` is set and ≥1 day logged). Pure derived data — nothing stored.
 
 ## UI / design

@@ -6,7 +6,7 @@ the app; the skill (`.opencode/skills/meal-tracker/SKILL.md`) points here.
 
 ## Snapshot
 
-- **What it is now:** a two-person household app (BOok / jingjing) that grew out
+- **What it is now:** a two-person household app (book / jingjing) that grew out
   of a meal tracker — meal logging, meal prep plan, market prices, shared
   shopping list, shared chores, shared calendar + daily mood, shared finance
   with IOU + budgets, weight progress, **health data import (Garmin/Apple Health)**,
@@ -56,7 +56,7 @@ by `normalize_user` (never raises):
 
 ```json
 {
-  "name": "BOok",
+  "name": "book",
   "gender": "male",
   "target": 2000,
   "goal": null,
@@ -99,7 +99,7 @@ by `normalize_user` (never raises):
 |---|---|---|
 | **Home** | `dashboard` | Day overview: stats, health score card (5-dimensional), calorie bar, macro-goal bars, water, "Activity & Vitals", "Today's plate" (animated), hub cards, today's chores, weekly activity, last-7-days, meals eaten today. |
 | **Meals** | `meals` + `prices` | Shared custom meals + editable catalog; search/add/edit/delete. Market Prices (Makro PRO) sub-section. |
-| **Calendar** | `calendar` + `mood` | Month grid with events (color-coded), filters All/Shared/BOok/jingjing. **Month · List · Mood sub-tabs.** Mood selector + month summary inside the Mood sub-tab. |
+| **Calendar** | `calendar` + `mood` | Month grid with events (color-coded),     filters All/Shared/book/jingjing. **Month · List · Mood sub-tabs.** Mood selector + month summary inside the Mood sub-tab. |
 | **Plan** | `plan` + `shopping` + `chores` | 4-week prep plan per gender + grocery list (localStorage checks). Shopping list (Food/Home/Health). Shared chores tick-off. |
 | **Finance** | `finance` | Red-gradient spending summary card with per-payer totals and frosted pending sub-cards. Monthly per-category budgets. Transaction list with settle/delete. |
 | **Profile** | `progress` + `settings` | Weight chart, BMI, goal progress, sleep/exercise charts. Profile settings, macro goals, theme, catalog downloads, JSON backup, health data import, Strava connect, cloud password. |

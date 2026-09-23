@@ -27,7 +27,7 @@ def empty_user(name, gender="male"):
 
 def default_users():
     return {
-        "book": empty_user("BOok", "male"),
+        "book": empty_user("book", "male"),
         "jingjing": empty_user("jingjing", "female"),
     }
 
@@ -208,7 +208,7 @@ def normalize_users(users):
         users["jingjing"] = users.pop("gf")
     users["book"] = normalize_user(users.get("book"), defaults["book"])
     users["jingjing"] = normalize_user(users.get("jingjing"), defaults["jingjing"])
-    users["book"]["name"] = users["book"].get("name") or "BOok"
+    users["book"]["name"] = users["book"].get("name") or "book"
     users["jingjing"]["name"] = users["jingjing"].get("name") or "jingjing"
     return users
 
