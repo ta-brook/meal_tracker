@@ -14,8 +14,7 @@ the app; the skill (`.opencode/skills/meal-tracker/SKILL.md`) points here.
 - **Stack:** Flask (Python) on Vercel, vanilla-JS single-page frontend, no build
   step, no framework, no test suite. Data persists to GitHub via the Git Data
   API (atomic commits) with a local `data/` fallback.
-- **Navigation:** classic top horizontal tab bar (`.tabs`), 11 tabs.
-  (A bottom tab bar was tried and **reverted** — `e5b11ff`.)
+- **Navigation:** fixed **bottom tab bar** (6 tabs: Home · Meals · Calendar · Plan · Finance · Profile). The previous 11-tab top bar was replaced in Ticket #6.
 
 ## Layout
 
@@ -94,29 +93,16 @@ by `normalize_user` (never raises):
 - `data/meals.csv` + `data/meals.xlsx` — catalog (week/meal/meal_name/gender/kcal/protein_g/carbs_g/fat_g/ingredients/method; ingredients/method pipe-`|` lists).
 - `data/prices.json` — `{updated, items:[{id, category, name, name_en, search, result}]}`.
 
-## Features / pages (top tabs)
+## Features / pages (bottom tabs)
 
-1. **Home** (`dashboard`) — day overview: stats, health score card (now 5-dimensional:
-   consistency, calories, protein, **sleep, activity**), calorie bar,
-   macro-goal bars, water, **"Activity & Vitals" card** (steps, burn, HR, distance),
-   "Today's plate" (animated), hub cards, "Today's chores" card,
-   **"Weekly Activity" card** (7-day steps/burn/sleep/workouts summary),
-   last-7-days, meals eaten today.
-2. **Meals** — shared custom meals + editable catalog; add/edit/delete + search.
-3. **Plan** — 4-week prep plan per gender + grocery list (localStorage checks).
-4. **Prices** — Makro PRO snapshot grouped by meat/veg/staples + Refresh (GitHub mode).
-5. **Shopping** — shared list in Food/Home/Health; add/check/delete; shows who added.
-6. **Chores** — shared chores; tick off who did what today.
-7. **Calendar** — month grid; events color-coded (shared=sage, personal=user color);
-   filters All/Shared/BOok/jingjing.
-8. **Mood** — per-user 6-level emoji log + color-coded month summary.
-9. **Finance** — IOU (net unsettled by payer), monthly per-category budgets
-   (auto-deducted), transaction list with settle/delete.
-10. **Progress** — weight chart, BMI, goal progress, **sleep chart + sleep stage stacked chart**,
-    exercise list.
-11. **Settings** — profile/targets/macro goals/height, theme, catalog downloads,
-    JSON backup export/import, **health data file import (CSV/ZIP/XML)**,
-    **Strava connect/sync/disconnect**, cloud password, clear data.
+| Tab | Sections inside | Description |
+|---|---|---|
+| **Home** | `dashboard` | Day overview: stats, health score card (5-dimensional), calorie bar, macro-goal bars, water, "Activity & Vitals", "Today's plate" (animated), hub cards, today's chores, weekly activity, last-7-days, meals eaten today. |
+| **Meals** | `meals` + `prices` | Shared custom meals + editable catalog; search/add/edit/delete. Market Prices (Makro PRO) sub-section. |
+| **Calendar** | `calendar` + `mood` | Month grid with events (color-coded), filters All/Shared/BOok/jingjing. **Month · List · Mood sub-tabs.** Mood selector + month summary inside the Mood sub-tab. |
+| **Plan** | `plan` + `shopping` + `chores` | 4-week prep plan per gender + grocery list (localStorage checks). Shopping list (Food/Home/Health). Shared chores tick-off. |
+| **Finance** | `finance` | Red-gradient spending summary card with per-payer totals and frosted pending sub-cards. Monthly per-category budgets. Transaction list with settle/delete. |
+| **Profile** | `progress` + `settings` | Weight chart, BMI, goal progress, sleep/exercise charts. Profile settings, macro goals, theme, catalog downloads, JSON backup, health data import, Strava connect, cloud password. |
 
 ## Save & sync
 
@@ -175,11 +161,11 @@ tab routing (`/#meals` etc.), "Install app" button in Settings.
 
 ## Design system
 
-Pastel sage + cream + peach tokens in `static/style.css` (documented in
-`.interface-design/system.md`). Nunito + system fallback; tabular numbers on
-stats; soft layered shadows; borders only on inputs/dividers; `prefers-reduced-motion`
-honored. Dark mode = `[data-theme="dark"]` token overrides + header theme toggle
-(Auto/Light/Dark). Active top tab uses `--primary`.
+Red / maroon primary on warm off-white canvas. Large-radius cards, soft layered
+shadows, clean list rows. Documented in `.interface-design/system.md`.
+Nunito + system fallback; tabular numbers on stats; borders only on inputs/dividers;
+`prefers-reduced-motion` honored. Dark mode = `[data-theme="dark"]` token overrides
++ header theme toggle (Auto/Light/Dark). Active bottom tab uses `--primary`.
 
 **New sleep-stage chart colors:**
 - Deep: `#5B6BA8` (dark blue)

@@ -161,7 +161,7 @@ function planMeals(){
 function renderUserSwitch(){const u=user();$("activeUser").textContent=u.name;$("userMe").classList.toggle("active",state.active_user==="book");$("userGf").classList.toggle("active",state.active_user==="jingjing");$("profileSummary").textContent=`${u.name} • ${u.target} kcal/day${u.goal?` • goal ${u.goal} kg`:""}`;$("progressUser").textContent=u.name}
 async function switchUser(id){state.active_user=id;localStorage.setItem(KEY+"Active",id);renderAll();toast(`Switched to ${user().name}`)}
 $("userMe").onclick=()=>switchUser("book");$("userGf").onclick=()=>switchUser("jingjing");
-$("openSettings").onclick=()=>tab("settings");
+;
 $("datePicker").value=today();$("datePicker").onchange=dashboard;
 function shiftDay(delta){const dt=new Date(($("datePicker").value||today())+"T12:00:00");if(isNaN(dt))return;dt.setDate(dt.getDate()+delta);$("datePicker").value=dt.toISOString().slice(0,10);dashboard()}
 function goToday(){$("datePicker").value=today();dashboard()}
@@ -176,16 +176,24 @@ function copyLastDay(){
   queueSave(`Copy meals from ${prev}`);renderAll();toast(`✓ Copied ${added.length} meal${added.length===1?"":"s"} from ${prev.slice(5)}`);
 }
 $("copyDayBtn").onclick=copyLastDay;
-const TABS=["dashboard","meals","plan","prices","shopping","chores","calendar","mood","finance","progress","settings"];
+const TABS=["home","meals","calendar","plan","finance","profile"];
+const TAB_GROUPS={home:["dashboard"],meals:["meals","prices"],calendar:["calendar"],plan:["plan","shopping","chores"],finance:["finance"],profile:["progress","settings"]};
 function tab(x){
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));
-  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===x));
-  if(x==="dashboard")dashboard();if(x==="meals")meals();if(x==="plan")planView();if(x==="prices")prices();if(x==="shopping")shopping();if(x==="chores")chores();if(x==="calendar")calendar();if(x==="mood")mood();if(x==="finance")finance();if(x==="progress")progress();if(x==="settings")settings();
+  const secs=TAB_GROUPS[x]||[x];
+  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",secs.includes(p.id)));
+  if(x==="home")dashboard();
+  if(x==="meals"){meals();prices()}
+  if(x==="calendar"){calendar();mood()}
+  if(x==="plan"){planView();shopping();chores()}
+  if(x==="finance")finance();
+  if(x==="profile"){progress();settings()}
   history.replaceState(null,"","#"+x);
 }
-function hashTab(){const x=(location.hash||"").replace("#","");if(TABS.includes(x))tab(x)}
+function hashTab(){let x=(location.hash||"").replace("#","");const map={dashboard:"home",prices:"meals",shopping:"plan",chores:"plan",mood:"calendar",progress:"profile",settings:"profile"};if(map[x])x=map[x];if(TABS.includes(x))tab(x)}
 window.addEventListener("hashchange",hashTab);
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+document.querySelectorAll(".sub-tab").forEach(b=>b.onclick=()=>{const section=b.closest("section");section.querySelectorAll(".sub-tab").forEach(s=>s.classList.toggle("active",s===b));section.querySelectorAll(".sub-pane").forEach(p=>p.hidden=p.id!==b.dataset.sub);});
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
   $("todayLabel").textContent=d===today()?"Today":d;["kcal","protein","carbs","fat"].forEach((k,i)=>$( ["calTotal","proteinTotal","carbsTotal","fatTotal"][i]).textContent=Math.round(t[k]));$("calTarget").textContent=Math.round(user().target);$("calPercent").textContent=p+"%";$("calBar").style.width=p+"%";$("remainingText").textContent=t.kcal<=user().target?Math.round(user().target-t.kcal)+" kcal remaining":Math.round(t.kcal-user().target)+" kcal over target";$("planKcalBadge").textContent=`Week ${week} • ${Math.round(pk)} planned kcal`;
@@ -507,7 +515,7 @@ function monthKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()
 function shiftMonth(mk,delta){const[y,m]=mk.split("-").map(Number);return monthKey(new Date(y,m-1+delta,1))}
 function renderHub(d){
   const mkey=monthKey(),openShop=(state.shopping.items||[]).filter(i=>!i.done).length,todayEvts=(state.calendar.events||[]).filter(e=>e.date===d).length,spent=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===mkey).reduce((a,t)=>a+(t.amount||0),0),chores=state.chores.chores||[],choresDone=chores.filter(c=>c.done&&c.done[d]).length,lastW=[...(user().weights||[])].sort((a,b)=>b.date.localeCompare(a.date))[0];
-  const cards=[["meals","🍗","Meals",`${state.meals.length} custom`],["plan","📅","Plan",`Week ${week}`],["prices","🏷️","Prices",(PRICES.items||[]).filter(i=>i.result).length+" items"],["shopping","🛒","Shopping",`${openShop} open`],["calendar","📆","Calendar",`${todayEvts} today`],["chores","🧹","Chores",`${choresDone}/${chores.length} done`],["finance","💸","Finance",`฿${Math.round(spent)} mo`],["progress","📉","Progress",lastW?`${lastW.weight} kg`:"—"]];
+  const cards=[["home","🏠","Home","Dashboard"],["meals","🍗","Meals",`${state.meals.length} custom`],["plan","📋","Plan",`Week ${week}`],["calendar","📅","Calendar",`${todayEvts} today`],["finance","💸","Finance",`฿${Math.round(spent)} mo`],["profile","👤","Profile",lastW?`${lastW.weight} kg`:"—"]];
   $("hubCards").innerHTML=cards.map(([p,ic,lb,st])=>`<button class="hub-card" onclick="tab('${p}')"><span class="hub-icon">${ic}</span><b>${lb}</b><small>${st}</small></button>`).join("");
 }
 function renderHealthSummary(){
@@ -567,6 +575,7 @@ function calendar(){
   $("calGrid").innerHTML=html.join("");
   const monthEvents=events.filter(e=>e.date.slice(0,7)===calKey(calY,calM,1).slice(0,7)&&calVisible(e)).sort((a,b)=>a.date.localeCompare(b.date));
   $("calEvents").innerHTML=monthEvents.map(e=>`<div class="list-item"><span><span class="cal-dot" style="background:${EVENT_COLOR[e.kind==="personal"?e.user:"shared"]};display:inline-block;margin-right:6px"></span><b>${esc(e.title)}</b><br><small>${e.date}${e.kind==="personal"?` • ${esc(USER_NAME[e.user]||e.user)}`:""}${e.note?` • ${esc(e.note)}`:""}</small></span><button class="danger small" onclick="deleteEvent('${e.id}')">Delete</button></div>`).join("")||'<p class="muted">No events this month.</p>';
+$("calEventsList").innerHTML=$("calEvents").innerHTML;
 }
 function calNav(dir){calM+=dir;if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}calendar();mood()}
 $("calPrev").onclick=()=>calNav(-1);$("calNext").onclick=()=>calNav(1);$("calToday").onclick=()=>{const t=new Date();calY=t.getFullYear();calM=t.getMonth();calendar()};
@@ -593,7 +602,8 @@ function finance(){
   $("finMonthLabel").textContent=finMonth;
   const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth),budgets=(state.finance.budgets||{})[finMonth]||{},unsettled=(state.finance.transactions||[]).filter(t=>!t.settled);
   const bPaid=unsettled.filter(t=>t.paid_by==="book").reduce((a,t)=>a+(t.amount||0),0),jPaid=unsettled.filter(t=>t.paid_by==="jingjing").reduce((a,t)=>a+(t.amount||0),0),net=Math.round(bPaid-jPaid);
-  $("iouCard").innerHTML=`<div class="card-title"><h3>Who owes whom</h3></div><div class="iou-row"><span>BOok paid (unsettled)</span><b>฿${Math.round(bPaid)}</b></div><div class="iou-row"><span>jingjing paid (unsettled)</span><b>฿${Math.round(jPaid)}</b></div><div class="iou-row"><span>Balance</span><b>${net>0?`jingjing owes BOok ฿${net}`:net<0?`BOok owes jingjing ฿${-net}`:"All settled"}</b></div>`;
+  const totalUnsettled=Math.round(bPaid+jPaid);
+$("iouCard").innerHTML=`<div class="fin-hero"><h3>This Month's Spending</h3><div class="fin-big">฿${totalUnsettled.toLocaleString()}</div><div class="fin-sub"><div><span>BOok Paid</span><b>฿${Math.round(bPaid).toLocaleString()}</b></div><div><span>jingjing Paid</span><b>฿${Math.round(jPaid).toLocaleString()}</b></div></div><div class="fin-pending"><div class="fin-pend"><span>BOok Pending</span><b>฿${Math.round(bPaid).toLocaleString()}</b><small>${unsettled.filter(t=>t.paid_by==="book").length} item(s) to settle</small></div><div class="fin-pend"><span>jingjing Pending</span><b>฿${Math.round(jPaid).toLocaleString()}</b><small>${unsettled.filter(t=>t.paid_by==="jingjing").length} item(s) to settle</small></div></div></div>`;
   const spent={};txs.forEach(t=>{spent[t.category]=(spent[t.category]||0)+t.amount});
   const withBudget=Object.keys(F_CATS).filter(c=>(budgets[c]||0)>0);
   $("budgetBars").innerHTML=withBudget.length?withBudget.map(c=>{const b=budgets[c],s=spent[c]||0,p=Math.min(100,Math.round(s/b*100));return `<div class="budget-row"><span>${F_CATS[c][0]} ${F_CATS[c][1]}</span><div class="hbar"><i style="width:${p}%"></i></div><b>฿${Math.round(s)}/${Math.round(b)}</b></div>`}).join(""):'<p class="muted">No budgets set for this month — tap "Set budgets".</p>';
@@ -613,7 +623,7 @@ async function boot(){
   await loadCatalog();
   await loadPrices();
   renderAll();
-  tab((location.hash||"").replace("#","")||"dashboard");
+  tab((location.hash||"").replace("#","")||"home");
   // Strava OAuth callback toast
   const sp=new URLSearchParams(location.search);
   if(sp.get("strava")==="connected"){toast("✓ Strava connected");history.replaceState(null,"",location.pathname+location.hash)}

@@ -1,42 +1,59 @@
 # Meal Tracker — Interface System
 
-Pastel, calm, kitchen-fresh UI for a two-person meal-logging app. Direction confirmed with the user: **sage + cream + peach**.
+Red / maroon primary on warm off-white. Updated in Ticket #6 to match the user-provided "Our Homie" reference (UI-only redesign).
 
 ## Intent
 
 - **Human:** a couple (BOok, jingjing) logging meals and weights daily on desktop and phone — quick taps, calm glance.
 - **Feel:** warm, fresh, easy on the eyes. Soft like a food journal, not a dashboard.
-- **Signature:** pastel pill user-switch (soft blue BOok / soft peach jingjing), sage "Meal x" tags, cream surfaces, rounded friendly type.
+- **Signature:** deep red primary, large rounded cards, fixed bottom tab bar, red-gradient finance summary, calendar with Month/List/Mood sub-tabs.
 
-## Tokens (light mode only)
+## Tokens (light mode)
 
 | Token | Value | Notes |
 |---|---|---|
-| `--bg` | `#FBF8F4` | warm cream canvas |
+| `--bg` | `#FAF6F2` | warm off-white canvas |
 | `--surface` | `#FFFFFF` | cards, modal |
-| `--surface-soft` | `#F6F0E7` | list items, profile strip |
-| `--surface-tint` | `#EFE8DC` | track fills, insets |
-| `--primary` | `#9DBB93` | sage — active tab, brand |
-| `--primary-deep` | `#5F7E5B` | primary buttons, headings, hero numbers |
-| `--primary-soft` | `#E9F0E4` | tab hover, ingredient chips, tags |
-| `--peach` | `#F2D8C6` | secondary accent, progress bars |
-| `--peach-deep` | `#D9A47F` | progress fills, mini-bars |
-| `--book` / `--book-soft` | `#B9CEE8` / `#E8F0FA` | BOok active pill |
-| `--jingjing` / `--jingjing-soft` | `#F2C9B3` / `#FCEFEA` | jingjing active pill |
-| `--text` | `#454F46` | deep sage-gray ink |
-| `--muted` | `#8C958E` | secondary text |
-| `--border` | `rgba(60,70,60,.08)` | low-opacity, soft |
-| `--success` / deep | `#DCE8D4` / `#5F7E5B` | logged state |
-| `--warning` / deep | `#F3E2C4` / `#A9792B` | banner warn |
-| `--danger` / deep | `#F3C9C3` / `#A94F3B` | delete, clear |
+| `--surface-soft` | `#F5EFEA` | list items, profile strip |
+| `--surface-tint` | `#EDE4DC` | track fills, insets |
+| `--primary` | `#D94838` | red — active tab, brand, buttons |
+| `--primary-deep` | `#A93226` | deep maroon — headings, hero numbers |
+| `--primary-soft` | `#F8E3DF` | soft red tint — tab hover, tags, ingredient chips |
+| `--accent` | `#E8A87C` | peach-orange — progress bars, gradients |
+| `--book` / `--book-soft` | `#AEC3E0` / `#E4EDF8` | BOok active pill |
+| `--jingjing` / `--jingjing-soft` | `#E8B89E` / `#F9E7DC` | jingjing active pill |
+| `--text` | `#3B312E` | warm dark ink |
+| `--muted` | `#8B7D78` | secondary text |
+| `--border` | `rgba(70,45,38,.08)` | low-opacity, soft |
+| `--success` / deep | `#D9E8D3` / `#4F7A4C` | logged state |
+| `--warning` / deep | `#F3E2C4` / `#9A7528` | banner warn |
+| `--danger` / deep | `#E8B9B0` / `#A93226` | delete, clear |
 | shadows | `--shadow-sm`/`--shadow`/`--shadow-lg` | layered soft, no hard borders for elevation |
 
 ## Dark mode
 
 `[data-theme="dark"]` in `static/style.css` overrides the same token variables
-(sage-gray canvas, darker cream surfaces, light sage ink), so every component
-flips automatically. Selection via Settings → Appearance (Auto / Light / Dark),
-defaulting to the system `prefers-color-scheme`; choice stored in localStorage.
+(red-tinted surfaces, light red ink), so every component flips automatically.
+Selection via Settings → Appearance (Auto / Light / Dark), defaulting to the
+system `prefers-color-scheme`; choice stored in localStorage.
+
+## Bottom tab bar
+
+Fixed at viewport bottom. 6 tabs: Home · Meals · Calendar · Plan · Finance · Profile.
+Active tab = red icon + label with a subtle indicator dot. Inactive = muted gray.
+`env(safe-area-inset-bottom)` padding for notched phones.
+
+## Calendar sub-tabs
+
+Inside the Calendar page: **Month · List · Mood** pill sub-tabs toggle between the
+month grid, the events list, and the mood selector/month summary. Implemented with
+`.sub-tab` / `.sub-pane` classes and a small JS toggle.
+
+## Finance summary card
+
+`.fin-hero` uses a red gradient (`#C0392B → #A93226`), white text, large total
+spending number, per-payer sub-totals, and frosted pending sub-cards
+(`rgba(255,255,255,.18)` with `backdrop-filter`).
 
 ## Today's plate (dashboard signature)
 
@@ -45,22 +62,22 @@ your day. `--p` conic ring around it shows calorie % of target (reuses
 `--primary`/`--surface-tint`). Motion: emojis pop in `foodPop` (0.3s,
 `cubic-bezier(.23,1,.32,1)`, stagger 60ms, only when the meal count changes);
 the ring gently floats `plateFloat` (4.5s ease-in-out) while food is present.
-All motion dies under `prefers-reduced-motion`. Sizes: ring 150 / inner plate
-118 (`outer = inner + 32`).
+All motion dies under `prefers-reduced-motion`. Sizes: ring 160 / inner plate 126.
 
 ## Decisions
 
 - **Depth strategy:** subtle layered shadows for elevation; real borders only on inputs + dividers (`--border`). Never harsh borders.
-- **Spacing base:** 8px grid; cards `18–20px` padding, section gaps `12–22px`.
-- **Radius scale:** inputs/buttons `10`, cards `18`, modal `24`.
+- **Spacing base:** 8px grid; cards `20px` padding, section gaps `12–22px`.
+- **Radius scale:** inputs/buttons `12`, cards `18–26`, modal `26`.
 - **Type:** Nunito (Google Fonts) + system fallback; body `15px/1.6`; headings `700–800`, tight tracking (`-0.01em`); labels `12px` uppercase tracked on stats.
 - **Numbers:** `font-variant-numeric: tabular-nums` on all stats/calorie values.
 - **Motion:** `cubic-bezier(.23,1,.32,1)`, 120–300ms, transform/opacity only, press `scale(.97)`, `prefers-reduced-motion` honored.
-- **Semantic color is scarce:** gray builds structure; sage = brand/active; peach = progress; soft blue/peach = user identity; pastel red/amber = destructive/warn.
+- **Semantic color is scarce:** gray builds structure; red = brand/active; peach = progress; soft blue/peach = user identity; pastel red/amber = destructive/warn.
 
 ## Component patterns
 
-- **Button primary** — 40px h · 10px 16px pad · `--r-sm` (10) · 14px/700 · `--primary-deep` bg, white text.
-- **Pill user switch** — radius 999px, `8px 14px`, 13px/600; active = tinted soft bg + colored border.
-- **Meal card** — `--surface`, `--r-md` (18), `18px` pad, `--shadow-sm`, one sage tag + macro line.
+- **Button primary** — 40px h · 11px 18px pad · `--r-sm` (12) · 14px/700 · `--primary-deep` bg, white text.
+- **Pill user switch** — radius 999px, `9px 16px`, 13px/600; active = tinted soft bg + colored border.
+- **Meal card** — `--surface`, `--r-lg` (26), `20px` pad, `--shadow-sm`, one red tag + macro line.
 - **Stat** — uppercase 12px label, 30px/800 tabular value, muted small.
+- **Bottom nav tab** — flex column, 22px icon + 11px label, active red with dot indicator.

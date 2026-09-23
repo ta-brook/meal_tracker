@@ -124,6 +124,28 @@ CI (`.github/workflows/validate.yml`) runs `python -m compileall -q api` and JSO
 
 Push to GitHub → import into Vercel → set `GITHUB_TOKEN` (fine-grained, Contents: Read+Write), `GITHUB_REPO`, `GITHUB_BRANCH`, optional `APP_PASSWORD` → deploy. Never commit `credentials/` secrets (`.gitignore` excludes `credentials/`).
 
+## Before implementing any significant change
+
+The user expects these three steps **every time** a meaningful feature/redesign
+begins — do them proactively, do not wait to be asked:
+
+1. **Save a spec.** Write the plan/spec to a file before touching code. For
+   UI/UX redesigns or multi-part features use `SPEC.md` (repo root) or a
+   `docs/` file; for smaller changes describe the plan in `TASKS.md` under the
+   ticket entry. Include decisions, scope (what is NOT changing), and file list.
+2. **Create a GitHub ticket.** Use the GitHub API (no `gh` CLI in this
+   environment). Get the token from git's credential store without printing it:
+   ```powershell
+   $out = "protocol=https`nhost=github.com`n`n" | git credential fill 2>$null
+   $pass = ($out | Select-String '^password=(.*)$').Matches.Groups[1].Value
+   ```
+   Then `POST https://api.github.com/repos/ta-brook/meal_tracker/issues` with
+   `Authorization: Bearer $pass`, `User-Agent: opencode`, and a JSON body
+   written to a temp file (avoid inline here-string JSON — GitHub returns 400
+   "Problems parsing JSON"). Link the issue number in `TASKS.md`.
+3. **Record it in `TASKS.md`.** Add a `## Ticket #N — ...` entry with Status,
+   GitHub Issue number, Priority, Description, Spec/Files.
+
 ## Keep docs in sync
 
 At the end of any significant change (new feature, schema/data change, new

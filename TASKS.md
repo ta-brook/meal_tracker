@@ -32,3 +32,11 @@
 - **Status:** DONE ✅
 - **Priority:** Medium
 - **Description:** Run local Flask server, verify all pages render without JS errors, test save/sync, test CSV import.
+
+## Ticket #6 — UI/UX Redesign (bottom nav + new visual language)
+- **Status:** IN PROGRESS 🚧
+- **GitHub Issue:** #6 (created)
+- **Priority:** High
+- **Description:** Restyle the app to match the user-provided "Our Homie" reference (UI only, no feature changes). New bottom tab bar (Home · Meals · Calendar · Plan · Finance · Profile), deep red/maroon primary, larger cards, Calendar+Mood merged with Month/List/Mood sub-tabs, Finance gradient summary card, clean list rows.
+- **Spec:** `SPEC.md`
+- **Files:** `templates/index.html`, `static/style.css`, `static/app.js`, `.interface-design/system.md`, `state.md`
