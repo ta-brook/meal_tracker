@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-06T08:24:35+00:00",
+  "updated": "2026-09-23T00:38:53+00:00",
   "items": [
     {
       "id": "chicken-breast",
@@ -24,10 +24,10 @@
       "name_en": "Chicken tenderloin",
       "search": "สันในไก่",
       "result": {
-        "title": "ซีพี สันในไก่ แพ็ค 1 กก.",
-        "title_en": "CP Chicken Fillet 1 kg",
-        "price": 104,
-        "original_price": 104,
+        "title": "สันในไก่ 1 กก.",
+        "title_en": "Chicken Fillet 1 kg",
+        "price": 102,
+        "original_price": 102,
         "unit": "1 unit(s)",
         "category": "meat/poultry/chilled",
         "in_stock": true
@@ -40,10 +40,10 @@
       "name_en": "Minced chicken",
       "search": "ไก่บด",
       "result": {
-        "title": "อกไก่บด 1 กก.",
-        "title_en": "Chicken Boneless Breast Mince 1 kg",
-        "price": 93,
-        "original_price": 93,
+        "title": "สันในไก่บด 1 กก.",
+        "title_en": "Chicken Fillet-Mince 1 kg",
+        "price": 109,
+        "original_price": 109,
         "unit": "1 unit(s)",
         "category": "meat/poultry/chilled",
         "in_stock": true
@@ -58,8 +58,8 @@
       "result": {
         "title": "เนื้อหมูบด ผสมมัน 10% 1 กก.",
         "title_en": "Fresh Minced Pork with Fat 10% 1 kg",
-        "price": 139,
-        "original_price": 139,
+        "price": 135,
+        "original_price": 135,
         "unit": "1 kg",
         "category": "meat/pork/frozen",
         "in_stock": true
@@ -74,8 +74,8 @@
       "result": {
         "title": "พีเอสฟู้ดส์ สันในหมูกระทะแช่แข็ง แพ็ค 1 กก.",
         "title_en": "PS FOOD Frozen Pork Tenderloin Pan 1 kg",
-        "price": 155,
-        "original_price": 155,
+        "price": 152,
+        "original_price": 152,
         "unit": "1 unit(s)",
         "category": "meat/pork/frozen",
         "in_stock": true
@@ -88,11 +88,11 @@
       "name_en": "Eggs",
       "search": "ไข่ไก่",
       "result": {
-        "title": "เอโร่ ไข่ไก่ เบอร์ 0 มีฝา 30 ฟอง",
-        "title_en": "ARO Chicken Egg no.0 with Cover 30 pcs",
-        "price": 168,
-        "original_price": 168,
-        "unit": "30 unit(s)",
+        "title": "เอโร่ ไข่ไก่ เบอร์ 3 ไม่มีฝา 30 ฟอง x 5",
+        "title_en": "ARO Chicken Egg no.3 No Cover 30 pcs x 5",
+        "price": 680,
+        "original_price": 680,
+        "unit": "5 unit(s)",
         "category": "dry-grocery/eggs/chicken-egg",
         "in_stock": true
       }
@@ -106,8 +106,8 @@
       "result": {
         "title": "กุ้งขาวไว้หางแช่แข็ง (45-55 ตัว/ถุง) 1 กก.",
         "title_en": "Frozen Peeled Deveined Tail On White Shrimp (45-55 pcs/pack) 1 kg",
-        "price": 189,
-        "original_price": 189,
+        "price": 209,
+        "original_price": 209,
         "unit": "1 unit(s)",
         "category": "fish-seafood/shrip-prawns/frozen",
         "in_stock": true
@@ -120,12 +120,12 @@
       "name_en": "Fish",
       "search": "เนื้อปลา",
       "result": {
-        "title": "วรา เนื้อปลาทู 200 ก.",
-        "title_en": "WARA Steamed Mackerel Meat 200 g",
-        "price": 59,
-        "original_price": 59,
+        "title": "เนื้อปลายี่สกขูด 1 กก.",
+        "title_en": "Rohu Fish Meat 1 kg",
+        "price": 95,
+        "original_price": 95,
         "unit": "1 unit(s)",
-        "category": "fish-seafood/fish/frozen",
+        "category": "fish-seafood/fish/fresh",
         "in_stock": true
       }
     },
@@ -138,8 +138,8 @@
       "result": {
         "title": "ใบกะเพรา 150 ก.",
         "title_en": "Sweet Basil Leaf 150 g",
-        "price": 17,
-        "original_price": 17,
+        "price": 15,
+        "original_price": 15,
         "unit": "1 unit(s)",
         "category": "fruit-vegetables/vegetables/fresh-vegetables",
         "in_stock": true
@@ -186,8 +186,8 @@
       "result": {
         "title": "พริกยักษ์สามสี 500 กรัม แพ็คละ",
         "title_en": "Tricolor Bell Pepper A-Grade500g",
-        "price": 69,
-        "original_price": 69,
+        "price": 85,
+        "original_price": 85,
         "unit": "1 unit(s)",
         "category": "fruit-vegetables/vegetables/fresh-vegetables",
         "in_stock": true
@@ -200,11 +200,11 @@
       "name_en": "Onion",
       "search": "หอมหัวใหญ่",
       "result": {
-        "title": "หอมใหญ่นอก ยกกระสอบ กระสอบละ 9-10.5 กก.",
-        "title_en": "Imported Onion 9-10.5 kg",
-        "price": 310,
-        "original_price": 310,
-        "unit": "1 unit(s)",
+        "title": "หอมใหญ่นําเข้า 1 กก.",
+        "title_en": "Imported Onion 1 kg",
+        "price": 37,
+        "original_price": 37,
+        "unit": "1 kg",
         "category": "fruit-vegetables/vegetables/imported-organice-vegetables",
         "in_stock": true
       }
@@ -234,8 +234,8 @@
       "result": {
         "title": "แครอทนอก จีน ลังละ 10 กก.",
         "title_en": "Import Chinese Carrot 10 kg",
-        "price": 180,
-        "original_price": 180,
+        "price": 150,
+        "original_price": 150,
         "unit": "1 carton(s)",
         "category": "fruit-vegetables/vegetables/imported-organice-vegetables",
         "in_stock": true
@@ -248,10 +248,10 @@
       "name_en": "Cabbage",
       "search": "กะหล่ำปลี",
       "result": {
-        "title": "กะหล่ําปลี แพ็ค 700 ก.",
-        "title_en": "Cabbage pack 700 g",
-        "price": 19,
-        "original_price": 19,
+        "title": "กะหล่ําปลี แพ็ค 500-700 ก.",
+        "title_en": "Cabbage pack 500-700 g",
+        "price": 25,
+        "original_price": 25,
         "unit": "1 unit(s)",
         "category": "fruit-vegetables/vegetables/fresh-vegetables",
         "in_stock": true
@@ -280,12 +280,12 @@
       "name_en": "Sweet potato",
       "search": "มันเทศ",
       "result": {
-        "title": "มันเทศไทยสีม่วง แพ็ค 1 กก.",
-        "title_en": "Thai Sweet Potato Pack 1 kg",
-        "price": 59,
-        "original_price": 59,
-        "unit": "1 unit(s)",
-        "category": "fruit-vegetables/vegetables/fresh-vegetables",
+        "title": "ผงมันม่วง GI ต่ํา ยี่ห้อฟีก้าไลฟ์ FEAGA LIFE 200 กรัม",
+        "title_en": "ผงมันม่วง GI ต่ํา ยี่ห้อฟีก้าไลฟ์ FEAGA LIFE 200 กรัม",
+        "price": 275,
+        "original_price": 275,
+        "unit": "1 piece(s)",
+        "category": "beverages/powdered-beverage-mixes",
         "in_stock": true
       }
     },
@@ -296,11 +296,11 @@
       "name_en": "Riceberry rice",
       "search": "ข้าวไรซ์เบอร์รี่",
       "result": {
-        "title": "เนเชอเรลออร์แกนิค ข้าวไรซ์เบอร์รี่ แบบกล่อง 1กิโลกรัม x2 กล่อง",
-        "title_en": "เนเชอเรลออร์แกนิค ข้าวไรซ์เบอร์รี่ แบบกล่อง 1กิโลกรัม x2 กล่อง",
-        "price": 270,
-        "original_price": 270,
-        "unit": "2 box(es)",
+        "title": "ข้าวไรซ์เบอร์รี่ - ตราใบหยก ขนาด 1 กิโลกรัม / 5 แพ็ค",
+        "title_en": "ข้าวไรซ์เบอร์รี่ - ตราใบหยก ขนาด 1 กิโลกรัม / 5 แพ็ค",
+        "price": 440,
+        "original_price": 540,
+        "unit": "5 unit(s)",
         "category": "",
         "in_stock": true
       }
@@ -314,8 +314,8 @@
       "result": {
         "title": "ตราฉัตร ข้าวหอมมะลิใหม่ 100% 5 กก.",
         "title_en": "ROYAL UMBRELLA Jasmine Rice (New) 100% 5 kg",
-        "price": 227,
-        "original_price": 227,
+        "price": 243,
+        "original_price": 243,
         "unit": "1 unit(s)",
         "category": "dry-grocery/grains-rice-cereal/fragrant-rice",
         "in_stock": true
@@ -344,11 +344,11 @@
       "name_en": "Cooking oil",
       "search": "น้ำมันพืช",
       "result": {
-        "title": "โบนัส น้ํามันปาล์ม 5 ล.",
-        "title_en": "BONUS Palm Oil 5 l",
-        "price": 252,
-        "original_price": 252,
-        "unit": "1 unit(s)",
+        "title": "องุ่น น้ํามันถั่วเหลือง 1 ล. 12 ขวด",
+        "title_en": "ANGOON Soybean Oil 1 l 12 bottles",
+        "price": 599,
+        "original_price": 599,
+        "unit": "12 unit(s)",
         "category": "dry-grocery/cooking-oil-vinegar/palm-oil",
         "in_stock": true
       }
