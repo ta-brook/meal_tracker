@@ -146,6 +146,13 @@ begins — do them proactively, do not wait to be asked:
 3. **Record it in `TASKS.md`.** Add a `## Ticket #N — ...` entry with Status,
    GitHub Issue number, Priority, Description, Spec/Files.
 
+## After committing — always push
+
+After every commit, **push to `origin/main` immediately**. Do not wait for the
+user to ask. If the push is rejected because the remote has new commits, pull
+(with rebase) and push again. The user expects code to be on GitHub as soon as
+it is committed locally.
+
 ## Keep docs in sync
 
 At the end of any significant change (new feature, schema/data change, new
