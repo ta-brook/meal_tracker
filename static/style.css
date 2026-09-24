@@ -108,7 +108,7 @@ h1,h2,h3{text-wrap:balance}
 .mood-cell:hover{transform:scale(1.05)}
 
 /* Finance */
-.fin-hero{background:linear-gradient(135deg,#C0392B,#A93226);color:#fff;border-radius:var(--r-lg);padding:24px;box-shadow:0 12px 30px rgba(169,54,42,.22);margin-bottom:20px}
+.fin-hero{background:linear-gradient(135deg,var(--primary),var(--primary-deep));color:#fff;border-radius:var(--r-lg);padding:24px;box-shadow:0 12px 30px rgba(169,54,42,.22);margin-bottom:20px}
 .fin-hero h3{color:#fff;margin:0 0 8px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;opacity:.9}
 .fin-hero .fin-big{font-size:34px;font-weight:800;line-height:1.1}
 .fin-hero .fin-sub{display:flex;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap}
@@ -154,7 +154,7 @@ h1,h2,h3{text-wrap:balance}
 .card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 
 /* Health card */
-.health-card{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.health-card{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .health-ring{--p:0%;flex:0 0 auto;width:104px;height:104px;border-radius:50%;background:conic-gradient(var(--primary) var(--p),var(--surface-tint) 0);display:flex;align-items:center;justify-content:center}
 .health-ring-in{width:82px;height:82px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
 .health-ring-in b{font-size:24px;color:var(--primary-deep);font-variant-numeric:tabular-nums;line-height:1}
@@ -178,7 +178,7 @@ h1,h2,h3{text-wrap:balance}
 .list-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-soft);border-radius:var(--r-md);padding:13px 16px;font-size:14px;flex-wrap:wrap;border:1px solid transparent;transition:background .15s,border-color .15s}
 .list-item:hover{background:var(--surface-tint);border-color:var(--border)}
 .list-item small{color:var(--muted);font-weight:500}
-.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
 
 /* Progress */
 .progress{height:16px;background:var(--surface-tint);border-radius:999px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.06)}
@@ -187,7 +187,7 @@ h1,h2,h3{text-wrap:balance}
 .mini-day{background:var(--surface-soft);border-radius:var(--r-sm);padding:8px;text-align:center}
 .mini-day b{display:block;font-size:11px;color:var(--muted);font-weight:600}
 .mini-day span{font-size:12px;font-weight:700;color:var(--primary-deep);font-variant-numeric:tabular-nums}
-.mini-progress{height:6px;background:#E7E1D6;border-radius:999px;overflow:hidden;margin-top:6px}
+.mini-progress{height:6px;background:var(--surface-tint);border-radius:999px;overflow:hidden;margin-top:6px}
 .mini-progress i{display:block;height:100%;background:var(--accent);border-radius:999px}
 
 /* Today's plate */
@@ -210,7 +210,7 @@ h1,h2,h3{text-wrap:balance}
 .meal-card h3{margin:0;font-size:17px;font-weight:800;color:var(--text)}
 .meal-card p{margin:0;color:var(--muted);font-size:13px;flex:1}
 .meal-card .actions{display:flex;gap:8px;flex-wrap:wrap}
-.catalog-card{margin-top:24px}
+.catalog-card{margin-top:20px}
 
 /* Plan */
 .plan-summary{margin-bottom:6px}
@@ -292,7 +292,7 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 .search-input{max-width:220px}
 
 /* Water card */
-.water-card{background:linear-gradient(180deg,var(--surface) 0%,#FDF0EE 100%)}
+.water-card{background:linear-gradient(180deg,var(--surface) 0%,var(--primary-soft) 100%)}
 .water-actions{display:flex;align-items:center;justify-content:center;gap:20px}
 .water-count{font-size:32px;font-weight:800;color:var(--primary-deep);font-variant-numeric:tabular-nums;min-width:48px;text-align:center}
 
@@ -308,7 +308,7 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 /* Price list */
 .price-group{margin-bottom:14px}
 .price-list{display:flex;flex-direction:column;gap:8px}
-.price-item{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--surface-soft);border-radius:var(--r-md);padding:10px 14px;flex-wrap:wrap}
+.price-item{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--surface-soft);border-radius:var(--r-md);padding:10px 14px;flex-wrap:wrap;row-gap:6px}
 .price-info b{color:var(--text);font-size:14px}
 .price-info small{display:block;color:var(--muted);font-size:12px;max-width:440px}
 .price-val{text-align:right;font-weight:800;color:var(--primary-deep);font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -361,6 +361,10 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 [data-theme="dark"] .water-card{background:linear-gradient(180deg,var(--surface) 0%,#2A1D1B 100%)}
 [data-theme="dark"] .fin-hero{background:linear-gradient(135deg,#8B2A1E,#6E2118)}
 [data-theme="dark"] .primary:focus-visible,[data-theme="dark"] .secondary:focus-visible,[data-theme="dark"] .danger:focus-visible,[data-theme="dark"] .tab:focus-visible,[data-theme="dark"] .sub-tab:focus-visible,[data-theme="dark"] .user-btn:focus-visible,[data-theme="dark"] .close:focus-visible{box-shadow:0 0 0 3px rgba(224,90,74,.45)}
+[data-theme="dark"] .sleep-deep{background:#3D4A73}
+[data-theme="dark"] .sleep-light{background:#5E6E8C}
+[data-theme="dark"] .sleep-rem{background:#4A7A3D}
+[data-theme="dark"] .sleep-awake{background:#8C5A66}
 
 @media(max-width:760px){
   .hero{padding:14px 16px}
