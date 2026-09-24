@@ -161,11 +161,12 @@ tab routing (`/#meals` etc.), "Install app" button in Settings.
 
 ## Design system
 
-Red / maroon primary on warm off-white canvas. Large-radius cards, soft layered
+Soft muted teal primary (`#5AAFA3` → `#0F3D36` for buttons) on warm off-white canvas. Large-radius cards, soft layered
 shadows, clean list rows. Documented in `.interface-design/system.md`.
 Nunito + system fallback; tabular numbers on stats; borders only on inputs/dividers;
 `prefers-reduced-motion` honored. Dark mode = `[data-theme="dark"]` token overrides
 + header theme toggle (Auto/Light/Dark). Active bottom tab uses `--primary`.
+Buttons are solid colors (no gradients), with brightness hover — simple and readable.
 
 **New sleep-stage chart colors:**
 - Deep: `#5B6BA8` (dark blue)
@@ -216,3 +217,41 @@ Nunito + system fallback; tabular numbers on stats; borders only on inputs/divid
 - Calorie target adjuster: "eat back" a percentage of active calories burned.
 - Trend arrows: week-over-week up/down indicators for weight, steps, sleep.
 - Sleep quality correlation: how sleep score affects health score.
+
+## Recent changes (2026-09-24 session)
+
+### Polish & accessibility
+- **Distinct `.danger` button** — solid `#C0392B` (was identical to `.primary` gradient)
+- **Focus-visible rings** on all interactive buttons (`.primary`, `.secondary`, `.danger`, `.tab`, `.sub-tab`, `.user-btn`, `.close`)
+- **`.card:hover` lift** (`translateY(-2px)`) for consistency with `.stat` and `.meal-card`
+- **`viewport-fit=cover`** added to viewport meta for proper iPhone safe-area handling
+
+### Tokenization & cleanup
+- Tokenized hardcoded colors: `.fin-hero`, `.water-card`, `.mini-progress`
+- Added dark-mode sleep stage colors (deep/light/rem/awake)
+- Fixed `.price-item` wrapping with `row-gap: 6px`
+- Tuned spacing rhythm (`.health-card`, `.dashboard-grid`, `.catalog-card` margins)
+- Added `--shadow-primary` and `--shadow-primary-lg` tokens
+- Unified `.hub-card` radius to `--r-lg` (26px)
+- Bumped `.stat span` labels from 11px to 12px
+- Fixed `.profile-strip span` magic margin → `#profileSummary`
+- Removed dead `.iou-row` CSS rules
+- Added missing `.week-btn` / `.week-buttons` styles
+- Removed unused `.fin-item` class from finance template
+
+### Mobile improvements
+- **16px font-size** on inputs/selects/textarea in `@media(max-width:760px)` (prevents iOS zoom)
+- Larger bottom-nav touch targets (`padding: 9px 2px`)
+- Tighter modal padding on mobile (`padding: 22px`)
+- Smaller section-head h2 (`font-size: 20px`)
+
+### Color redesign (red/maroon → muted seafoam teal)
+- **Primary:** `#D94838` (red) → `#06B6D4` (cyan) → `#5AAFA3` (muted teal) → `#0F3D36` (dark teal for buttons)
+- **Accent:** `#E8A87C` (peach) → `#2DD4BF` (mint) → `#8ECFB8` (soft sage)
+- **Dark mode:** cyan-tinted → seafoam-tinted tokens
+- **Simplified buttons:** removed gradients, removed colored hover shadows, solid colors only
+- Updated `theme-color` meta + `manifest.json` theme_color
+- Updated `.interface-design/system.md` with new palette
+
+### Commits
+`1d4224e` → `c900ad8` → `9b1cf23` → `2fef58c` → `a7136de` → `c6a63db` → `ea512f7` → `e4ff0d0` → `6816f2f` → `0d24164`
