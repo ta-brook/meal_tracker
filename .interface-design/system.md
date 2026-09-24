@@ -17,7 +17,7 @@ Soft muted teal primary on warm off-white. A calm, comfy blue-green that feels n
 | `--surface-soft` | `#F5EFEA` | list items, profile strip |
 | `--surface-tint` | `#EDE4DC` | track fills, insets |
 | `--primary` | `#5AAFA3` | muted teal — active tab, brand, buttons |
-| `--primary-deep` | `#3D857A` | deep seafoam — headings, hero numbers |
+| `--primary-deep` | `#0F3D36` | deep seafoam — headings, hero numbers |
 | `--primary-soft` | `#E0F2EF` | soft seafoam tint — tab hover, tags, ingredient chips |
 | `--accent` | `#8ECFB8` | soft sage — progress bars, gradients |
 | `--book` / `--book-soft` | `#AEC3E0` / `#E4EDF8` | book active pill |
