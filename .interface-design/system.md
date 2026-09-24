@@ -1,12 +1,12 @@
 # Meal Tracker — Interface System
 
-Cyan / teal primary on warm off-white. Evolved from the red/maroon Ticket #6 redesign into a fresher blue-green palette.
+Soft muted teal primary on warm off-white. A calm, comfy blue-green that feels natural and easy on the eyes.
 
 ## Intent
 
 - **Human:** a couple (book, jingjing) logging meals and weights daily on desktop and phone — quick taps, calm glance.
 - **Feel:** warm, fresh, easy on the eyes. Soft like a food journal, not a dashboard.
-- **Signature:** cyan primary, large rounded cards, fixed bottom tab bar, cyan-gradient finance summary, calendar with Month/List/Mood sub-tabs.
+- **Signature:** soft muted teal primary, large rounded cards, fixed bottom tab bar, seafoam-gradient finance summary, calendar with Month/List/Mood sub-tabs.
 
 ## Tokens (light mode)
 
@@ -16,10 +16,10 @@ Cyan / teal primary on warm off-white. Evolved from the red/maroon Ticket #6 red
 | `--surface` | `#FFFFFF` | cards, modal |
 | `--surface-soft` | `#F5EFEA` | list items, profile strip |
 | `--surface-tint` | `#EDE4DC` | track fills, insets |
-| `--primary` | `#06B6D4` | cyan — active tab, brand, buttons |
-| `--primary-deep` | `#0E7490` | deep teal — headings, hero numbers |
-| `--primary-soft` | `#CFFAFE` | soft cyan tint — tab hover, tags, ingredient chips |
-| `--accent` | `#2DD4BF` | mint-teal — progress bars, gradients |
+| `--primary` | `#5AAFA3` | muted teal — active tab, brand, buttons |
+| `--primary-deep` | `#3D857A` | deep seafoam — headings, hero numbers |
+| `--primary-soft` | `#E0F2EF` | soft seafoam tint — tab hover, tags, ingredient chips |
+| `--accent` | `#8ECFB8` | soft sage — progress bars, gradients |
 | `--book` / `--book-soft` | `#AEC3E0` / `#E4EDF8` | book active pill |
 | `--jingjing` / `--jingjing-soft` | `#E8B89E` / `#F9E7DC` | jingjing active pill |
 | `--text` | `#3B312E` | warm dark ink |
@@ -33,14 +33,14 @@ Cyan / teal primary on warm off-white. Evolved from the red/maroon Ticket #6 red
 ## Dark mode
 
 `[data-theme="dark"]` in `static/style.css` overrides the same token variables
-(cyan-tinted surfaces, light cyan ink), so every component flips automatically.
+(seafoam-tinted surfaces, light teal ink), so every component flips automatically.
 Selection via Settings → Appearance (Auto / Light / Dark), defaulting to the
 system `prefers-color-scheme`; choice stored in localStorage.
 
 ## Bottom tab bar
 
 Fixed at viewport bottom. 6 tabs: Home · Meals · Calendar · Plan · Finance · Profile.
-Active tab = cyan icon + label with a subtle indicator dot. Inactive = muted gray.
+Active tab = muted teal icon + label with a subtle indicator dot. Inactive = muted gray.
 `env(safe-area-inset-bottom)` padding for notched phones.
 
 ## Calendar sub-tabs
@@ -51,7 +51,7 @@ month grid, the events list, and the mood selector/month summary. Implemented wi
 
 ## Finance summary card
 
-`.fin-hero` uses a cyan gradient (`#06B6D4 → #0E7490`), white text, large total
+`.fin-hero` uses a seafoam gradient (`#5AAFA3 → #3D857A`), white text, large total
 spending number, per-payer sub-totals, and frosted pending sub-cards
 (`rgba(255,255,255,.18)` with `backdrop-filter`).
 
@@ -72,12 +72,12 @@ All motion dies under `prefers-reduced-motion`. Sizes: ring 160 / inner plate 12
 - **Type:** Nunito (Google Fonts) + system fallback; body `15px/1.6`; headings `700–800`, tight tracking (`-0.01em`); labels `12px` uppercase tracked on stats.
 - **Numbers:** `font-variant-numeric: tabular-nums` on all stats/calorie values.
 - **Motion:** `cubic-bezier(.23,1,.32,1)`, 120–300ms, transform/opacity only, press `scale(.97)`, `prefers-reduced-motion` honored.
-- **Semantic color is scarce:** gray builds structure; cyan = brand/active; mint = progress; soft blue/peach = user identity; pastel red/amber = destructive/warn.
+- **Semantic color is scarce:** gray builds structure; muted teal = brand/active; soft sage = progress; soft blue/peach = user identity; pastel red/amber = destructive/warn.
 
 ## Component patterns
 
 - **Button primary** — 40px h · 11px 18px pad · `--r-sm` (12) · 14px/700 · `--primary-deep` bg, white text.
 - **Pill user switch** — radius 999px, `9px 16px`, 13px/600; active = tinted soft bg + colored border.
-- **Meal card** — `--surface`, `--r-lg` (26), `20px` pad, `--shadow-sm`, one cyan tag + macro line.
+- **Meal card** — `--surface`, `--r-lg` (26), `20px` pad, `--shadow-sm`, one muted teal tag + macro line.
 - **Stat** — uppercase 12px label, 30px/800 tabular value, muted small.
-- **Bottom nav tab** — flex column, 22px icon + 11px label, active cyan with dot indicator.
+- **Bottom nav tab** — flex column, 22px icon + 11px label, active muted teal with dot indicator.
