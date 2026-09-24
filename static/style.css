@@ -378,8 +378,11 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
   .week-summary{grid-template-columns:repeat(4,1fr)}
   .chart{height:140px}
   .container{width:min(1100px,96%);margin:14px auto 20px}
-  .bottom-nav .tab{font-size:10px}
+  .bottom-nav .tab{font-size:10px;padding:9px 2px}
   .bottom-nav .tab .tab-ic{font-size:20px}
+  input,select,textarea{font-size:16px}
+  .modal-box{padding:22px}
+  .section-head h2{font-size:20px}
 }
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
