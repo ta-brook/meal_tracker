@@ -118,7 +118,8 @@ by `normalize_user` (never raises):
 ## Endpoints
 
 - `GET /` (page), `GET /sw.js`, `GET /manifest.json`
-- `GET /api/config` — `{auth, persistent, storage}`
+- `GET /api/config` — `{auth, persistent, storage, users}`
+- `POST /api/login` — `{user, password}` → `{ok, user}` or 401
 - `GET /api/state` — `{users, meals, shopping, calendar, finance, chores}` (auth)
 - `PUT|POST /api/state` — atomic write of any changed file (auth)
 - `GET|POST /api/meal-catalog`, `PUT /api/meal-catalog`, `DELETE /api/meal-catalog` (GET open; rest auth)
@@ -131,8 +132,10 @@ by `normalize_user` (never raises):
 - **`POST /api/strava/sync`** — **NEW** — manual sync; body `{user}`; returns `{ok, summary}`.
 - **`GET|POST /api/webhook/strava`** — **NEW** — webhook validation (GET) + event receiver (POST).
 
-Auth: optional shared `APP_PASSWORD` via `X-App-Password` header; token never
-reaches the browser.
+Auth: optional per-user passwords (`BOOK_PASSWORD`, `JINGJING_PASSWORD` env vars)
+plus a master fallback `APP_PASSWORD`. All sent via `X-App-Password` header.
+Frontend has a login overlay: pick profile → enter password → `POST /api/login`.
+"Remember me" stores `{user,token}` in `localStorage`; logout clears it.
 
 ## Health data import
 

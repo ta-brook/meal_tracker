@@ -8,8 +8,19 @@ from api import catalog, config, github, import_handlers, meals, prices, shared,
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
 
-def check_password():
-    return not config.APP_PASSWORD or request.headers.get("X-App-Password") == config.APP_PASSWORD
+def check_password(supplied=None, user=None):
+    pw = supplied if supplied is not None else request.headers.get("X-App-Password")
+    if not config.APP_PASSWORD and not any(config.USER_PASSWORDS.values()):
+        return True
+    if not pw:
+        return False
+    if pw == config.APP_PASSWORD:
+        return True
+    if user and pw == config.USER_PASSWORDS.get(user):
+        return True
+    if any(pw == p for p in config.USER_PASSWORDS.values() if p):
+        return True
+    return False
 
 
 def _conflict():
@@ -33,11 +44,25 @@ def web_manifest():
 
 @app.get("/api/config")
 def config_endpoint():
+    has_any_password = bool(config.APP_PASSWORD) or any(config.USER_PASSWORDS.values())
     return jsonify({
-        "auth": bool(config.APP_PASSWORD),
+        "auth": has_any_password,
         "persistent": config.persistent(),
         "storage": "GitHub: book/state.json + jingjing/state.json + meals.json" if config.persistent() else "Local files",
+        "users": list(config.USER_FILES.keys()),
     })
+
+
+@app.post("/api/login")
+def login():
+    body = request.get_json(force=True) or {}
+    uid = str(body.get("user", "")).strip()
+    pw = str(body.get("password", "")).strip()
+    if uid not in config.USER_FILES:
+        return jsonify(error="Invalid user"), 400
+    if not check_password(pw, uid):
+        return jsonify(error="Invalid password"), 401
+    return jsonify(ok=True, user=uid)
 
 
 @app.get("/api/state")

@@ -371,6 +371,27 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 [data-theme="dark"] .sleep-rem{background:#4A7A3D}
 [data-theme="dark"] .sleep-awake{background:#8C5A66}
 
+.login-overlay{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-overlay.hidden{display:none}
+.login-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:28px;box-shadow:var(--shadow-lg);text-align:center}
+.login-brand{margin-bottom:20px}
+.login-logo{font-size:44px;line-height:1;margin-bottom:8px}
+.login-brand h1{margin:0;font-size:24px;font-weight:800;color:var(--primary-deep);letter-spacing:-.02em}
+.login-brand p{margin:6px 0 0;color:var(--muted);font-size:13px;font-weight:600}
+.login-profiles{display:flex;gap:12px;margin-bottom:18px}
+.login-profile{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border:2px solid var(--border);background:var(--surface-soft);border-radius:var(--r-md);cursor:pointer;font-family:var(--font);font-weight:700;font-size:14px;color:var(--text);transition:border-color .15s,background .15s,transform .15s var(--ease)}
+.login-profile:hover{transform:translateY(-2px);background:var(--surface)}
+.login-profile.active{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-deep)}
+.login-avatar{font-size:28px;line-height:1}
+.login-label{display:block;text-align:left;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:16px}
+.login-label input{width:100%;margin-top:6px}
+.login-remember{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:16px;justify-content:center}
+.login-btn{width:100%;padding:12px;font-size:15px}
+.login-error{color:var(--danger-deep);font-size:13px;font-weight:700;margin-top:10px;min-height:20px}
+[data-theme="dark"] .login-overlay{background:#1A1E1D}
+[data-theme="dark"] .login-profile{background:var(--surface-tint)}
+[data-theme="dark"] .login-profile.active{background:var(--primary-soft)}
+
 @media(max-width:760px){
   .hero{padding:14px 16px}
   .hero h1{font-size:20px}

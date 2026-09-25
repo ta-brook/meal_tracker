@@ -3,7 +3,12 @@ const THEME_ICON = {auto:"🌓",light:"☀️",dark:"🌙"};
 const KEY = "mealTrackerV4";
 const EMPTY = {name:"",gender:"male",target:2000,goal:null,age:null,height:null,protein_goal:null,carbs_goal:null,fat_goal:null,meals:[],logs:{},weights:[],water:{},moods:{},health:{sleep:[],exercise:[],daily:{}},import_sources:{}};
 let state = {users:{book:{...EMPTY,name:"book",gender:"male",target:2000},jingjing:{...EMPTY,name:"jingjing",gender:"female",target:1600}},meals:[],shopping:{items:[]},calendar:{events:[]},finance:{transactions:[],budgets:{}},chores:{chores:[]},active_user:"book"};
-let week = 1, password = sessionStorage.getItem("mealTrackerPassword") || "", persistent = false, auth = false;
+let week = 1, persistent = false, auth = false;
+let loginToken = "", loggedInUser = null;
+const LOGIN_KEY = KEY + "_login";
+function getSavedLogin(){try{const s=JSON.parse(localStorage.getItem(LOGIN_KEY)||"null");if(s&&s.user&&s.token)return s}catch(e){}return null}
+function saveLogin(user,token,remember){if(remember)localStorage.setItem(LOGIN_KEY,JSON.stringify({user,token}));else localStorage.removeItem(LOGIN_KEY)}
+function clearLogin(){localStorage.removeItem(LOGIN_KEY);loginToken="";loggedInUser=null;}
 const $ = id => document.getElementById(id);
 const user = () => state.users[state.active_user || "book"];
 const today = () => new Date().toISOString().slice(0,10);
@@ -53,7 +58,7 @@ function migrateSharedMeals(){
   return merged;
 }
 async function api(path, options={}){
-  options.headers={...(options.headers||{}),...(password?{"X-App-Password":password}:{})};
+  options.headers={...(options.headers||{}),...(loginToken?{"X-App-Password":loginToken}:{})};
   const r=await fetch(path,options);let data={};try{data=await r.json()}catch(e){}
   if(!r.ok) throw new Error(data.error||`HTTP ${r.status}`); return data;
 }
@@ -102,7 +107,7 @@ async function flushSave(){
 window.addEventListener("pagehide",()=>{
   if(!persistent || pendingMessages.length===0) return;
   const message = [...new Set(pendingMessages)].join("; ").slice(0, 200);
-  const headers={"Content-Type":"application/json"}; if(password) headers["X-App-Password"]=password;
+  const headers={"Content-Type":"application/json"}; if(loginToken) headers["X-App-Password"]=loginToken;
   fetch("/api/state",{method:"POST",keepalive:true,headers,body:JSON.stringify({users:state.users,meals:state.meals,shopping:state.shopping,calendar:state.calendar,finance:state.finance,chores:state.chores,message})});
 });
 function logs(d){return user().logs[d]||[]}
@@ -396,7 +401,8 @@ function progress(){
 }
 function settings(){
   renderUserSwitch();
-  $("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("heightInput").value=user().height??"";$("proteinGoal").value=user().protein_goal??"";$("carbsGoal").value=user().carbs_goal??"";$("fatGoal").value=user().fat_goal??"";$("passwordInput").value=password;
+  $("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("heightInput").value=user().height??"";$("proteinGoal").value=user().protein_goal??"";$("carbsGoal").value=user().carbs_goal??"";$("fatGoal").value=user().fat_goal??"";
+  $("loggedInUserLabel").textContent=loggedInUser||"—";
   const h=user().health||{sleep:[],exercise:[],daily:{}};
   const dailyCount=Object.keys(h.daily||{}).length;
   const src=user().import_sources||{};
@@ -405,7 +411,7 @@ function settings(){
   renderStravaStatus();
 }
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"book":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;const h=$("heightInput").value;user().height=h?Math.max(1,Math.min(250,Math.round(n(h)))):null;const mg=id=>{const v=$(id).value;return v?Math.max(0,Math.round(n(v))):null};user().protein_goal=mg("proteinGoal");user().carbs_goal=mg("carbsGoal");user().fat_goal=mg("fatGoal");queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
-$("loginBtn").onclick=async()=>{password=$("passwordInput").value;sessionStorage.setItem("mealTrackerPassword",password);try{await loadCloud();renderAll();toast("✓ Cloud data loaded")}catch(e){setBanner("🔐 Could not connect — check APP_PASSWORD / GitHub settings.","warn");toast(e.message,false)}};
+$("logoutBtn").onclick=()=>{clearLogin();location.reload()};
 $("restoreBackup").onclick=async()=>{if(!confirm("Restore your last backed-up edits? This overwrites the current data."))return;try{const b=JSON.parse(localStorage.getItem(KEY+"_backup")||"null");if(!b?.users){toast("No backup found",false);return}state=b;migrate();localSave();queueSave("Restore last backup");renderAll();toast("✓ Backup restored")}catch(e){toast("Could not restore backup",false)}};
 $("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().logs={};user().weights=[];user().water={};user().moods={};user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
 function openModal(h){$("modalBody").innerHTML=h;$("modal").classList.remove("hidden")}function closeModal(){$("modal").classList.add("hidden")}$("closeModal").onclick=closeModal;$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
@@ -429,7 +435,7 @@ async function importHealthFile(file, source="upload"){
   form.append("user",state.active_user||"book");
   form.append("source",source);
   try{
-    const r=await fetch("/api/import/file",{method:"POST",headers:password?{"X-App-Password":password}:{},body:form});
+    const r=await fetch("/api/import/file",{method:"POST",headers:loginToken?{"X-App-Password":loginToken}:{},body:form});
     const data=await r.json();
     if(!r.ok){toast(data.error||"Import failed",false);return null}
     // Merge returned summary into local state optimistically
@@ -490,7 +496,7 @@ function prices(){
   renderUserSwitch();
   const upd=PRICES.updated?new Date(PRICES.updated).toLocaleString():null;
   $("pricesUpdated").textContent=upd||"never";
-  $("refreshPrices").hidden=!(persistent&&auth&&password);
+  $("refreshPrices").hidden=!(persistent&&auth&&loginToken);
   const groups={};
   (PRICES.items||[]).forEach(it=>{const g=groups[it.category]||(groups[it.category]=[]);g.push(it)});
   $("pricesContent").innerHTML=Object.keys(PRICE_GROUPS).filter(c=>groups[c]&&groups[c].length).map(c=>{
@@ -617,14 +623,70 @@ $("editBudgetBtn").onclick=()=>{const cur=(state.finance.budgets||{})[finMonth]|
 $("settleAllBtn").onclick=()=>{const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth&&!t.settled);if(!txs.length){toast("Nothing to settle",false);return}txs.forEach(t=>t.settled=true);queueSave("Settle all for "+finMonth);renderAll();toast("✓ All settled")};
 setInterval(async()=>{if(!persistent||pendingMessages.length)return;try{const s=await api("/api/state");let changed=false;for(const k of ["shopping","calendar","finance","chores"]){if(JSON.stringify(s[k])!==JSON.stringify(state[k])){state[k]=s[k];changed=true}}if(changed)renderAll()}catch(e){}},25000);
 function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings()}
+function showLogin(){$("loginOverlay").classList.remove("hidden");document.body.style.overflow="hidden"}
+function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow=""}
+function setLoginError(msg){$("loginError").textContent=msg||""}
+
+let selectedLoginUser = null;
+for(const btn of document.querySelectorAll(".login-profile")){
+  btn.onclick=()=>{
+    selectedLoginUser=btn.dataset.user;
+    document.querySelectorAll(".login-profile").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    setLoginError("");
+  }
+}
+
+$("loginSubmit").onclick=async()=>{
+  if(!selectedLoginUser){setLoginError("Select a profile first.");return}
+  const pw=$("loginPassword").value.trim();
+  if(!pw){setLoginError("Enter your password.");return}
+  try{
+    const r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:selectedLoginUser,password:pw})});
+    const data=await r.json();
+    if(!r.ok){setLoginError(data.error||"Login failed");return}
+    loginToken=pw;loggedInUser=selectedLoginUser;
+    const remember=$("loginRemember").checked;
+    saveLogin(loggedInUser,loginToken,remember);
+    state.active_user=loggedInUser;
+    localStorage.setItem(KEY+"Active",state.active_user);
+    hideLogin();
+    setBanner("Loading…","info");
+    try{await loadCloud()}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
+    await loadCatalog();await loadPrices();renderAll();toast("✓ Signed in as "+loggedInUser);
+  }catch(e){setLoginError("Network error — try again.");}
+};
+
+$("loginPassword").onkeydown=e=>{if(e.key==="Enter")$("loginSubmit").click()};
+
+async function attemptAutoLogin(){
+  const saved=getSavedLogin();
+  if(!saved)return false;
+  try{
+    const r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:saved.user,password:saved.token})});
+    const data=await r.json();
+    if(!r.ok){clearLogin();return false}
+    loginToken=saved.token;loggedInUser=saved.user;state.active_user=loggedInUser;
+    localStorage.setItem(KEY+"Active",state.active_user);
+    return true;
+  }catch(e){clearLogin();return false}
+}
+
 async function boot(){
-  localLoad(); migrate(); applyTheme(); state.active_user=localStorage.getItem(KEY+"Active")||state.active_user||"book";
-  try{const c=await api("/api/config");auth=c.auth;persistent=c.persistent;if(auth && !password){setBanner("🔐 Enter the app password in Profile & Settings to load cloud data.","warn")}else{await loadCloud()}}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
+  localLoad(); migrate(); applyTheme();
+  try{
+    const c=await api("/api/config");auth=c.auth;persistent=c.persistent;
+    if(auth){
+      const auto=await attemptAutoLogin();
+      if(!auto){showLogin();return}
+    }
+    state.active_user=loggedInUser||localStorage.getItem(KEY+"Active")||state.active_user||"book";
+    try{await loadCloud()}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
+  }catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
   await loadCatalog();
   await loadPrices();
   renderAll();
   tab((location.hash||"").replace("#","")||"home");
-  // Strava OAuth callback toast
   const sp=new URLSearchParams(location.search);
   if(sp.get("strava")==="connected"){toast("✓ Strava connected");history.replaceState(null,"",location.pathname+location.hash)}
   if(sp.get("strava")==="error"){toast("Strava connection failed",false);history.replaceState(null,"",location.pathname+location.hash)}

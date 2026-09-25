@@ -34,9 +34,17 @@
 - **Description:** Run local Flask server, verify all pages render without JS errors, test save/sync, test CSV import.
 
 ## Ticket #6 — UI/UX Redesign (bottom nav + new visual language)
-- **Status:** IN PROGRESS 🚧
-- **GitHub Issue:** #6 (created)
+- **Status:** DONE ✅
+- **GitHub Issue:** #6 (created & closed)
 - **Priority:** High
 - **Description:** Restyle the app to match the user-provided "Our Homie" reference (UI only, no feature changes). New bottom tab bar (Home · Meals · Calendar · Plan · Finance · Profile), deep red/maroon primary, larger cards, Calendar+Mood merged with Month/List/Mood sub-tabs, Finance gradient summary card, clean list rows.
 - **Spec:** `SPEC.md`
 - **Files:** `templates/index.html`, `static/style.css`, `static/app.js`, `.interface-design/system.md`, `state.md`
+
+## Ticket #7 — Per-User Login Page
+- **Status:** IN PROGRESS 🚧
+- **GitHub Issue:** #7 (created)
+- **Priority:** High
+- **Description:** Add a proper login screen with profile selection (book / jingjing) and per-user password auth. Keep APP_PASSWORD as master fallback. Remember-me via localStorage.
+- **Spec:** `SPEC.md`
+- **Files:** `api/config.py`, `api/index.py`, `templates/index.html`, `static/app.js`, `static/style.css`, `state.md`

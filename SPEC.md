@@ -1,78 +1,150 @@
-# Meal Tracker — UI/UX Redesign Spec (Ticket #6)
+# SPEC — Per-User Login Page (Ticket #7)
 
-User-provided reference: 5 screenshots of a couple's home-management app
-("Our Homie" look). Scope is **UI/UX only — no feature changes, no data-model
-changes**. All existing data and functionality stays identical; the visual
-language, navigation structure, and page composition change.
+## Goal
+Replace the single shared `APP_PASSWORD` with per-user passwords and add a proper login screen before the app UI.
 
-## Decisions (confirmed with user, interactive session)
+## Scope
 
-| Question | Decision |
-|---|---|
-| Tab mapping | Rename tabs to fit Meal Tracker (6 tabs) |
-| "Pet" tab | Replaced with an existing feature tab |
-| Shopping tab content | Shopping list (checkbox items) — keep current feature |
-| Branding | Keep **"Meal Tracker"** (adopt styling only) |
+### IN
+- Per-user password env vars (`BOOK_PASSWORD`, `JINGJING_PASSWORD`)
+- Keep `APP_PASSWORD` as a master fallback
+- New `/api/login` endpoint: accepts `{user, password}`, returns `{ok, user}`
+- Login overlay in `index.html`: profile selection + password input + remember me
+- Frontend login flow in `app.js`: validate → store token → unlock app
+- Login card styled in `style.css` (pastel theme, centered, modal-like)
+- `localStorage` persistence for "remember me"
 
-## Target visual language
+### OUT
+- No database migration
+- No OAuth / Google / third-party auth
+- No registration (still 2 hardcoded users)
+- No session cookies or JWT (keep header-based auth)
+- No encryption at rest (GitHub already private)
 
-- **Primary:** deep red / maroon (from the finance card + buttons in the
-  reference images).
-- **Background:** very light warm off-white/gray.
-- **Surfaces:** pure white cards, large radius, soft layered shadows.
-- **Navigation:** fixed **bottom tab bar** (replaces the 11-tab top bar),
-  active state = red icon + label.
-- **Headers:** per-page top header with title + action pills (e.g. `Shared | Personal`).
-- **Lists:** clean rows with icon/avatar circle, title, subtitle, trailing
-  action (checkmark / amount / delete).
-- **Finance:** large red gradient summary card, per-payer progress bars,
-  frosted pending sub-cards, category budget rows with red progress bars.
-- **Calendar + Mood:** combined page with `Month · List · Mood` sub-tabs and a
-  mood selector row of styled emoji circles.
+## Backend changes
 
-## 6 Bottom Tabs → feature mapping
+### `api/config.py`
+Add:
+```python
+BOOK_PASSWORD = os.getenv("BOOK_PASSWORD")
+JINGJING_PASSWORD = os.getenv("JINGJING_PASSWORD")
+USER_PASSWORDS = {
+    "book": BOOK_PASSWORD,
+    "jingjing": JINGJING_PASSWORD,
+}
+```
 
-| Tab | Features inside |
-|---|---|
-| **Home** | Dashboard: stat cards, health score ring, today's plate, water, macro bars, weekly summary, activity/vitals, today's meals, hub links |
-| **Meals** | Shared meal library + catalog + **Prices** (as a sub-section / stacked cards) |
-| **Calendar** | Calendar + Mood (sub-tabs: Month · List · Mood) |
-| **Plan** | 4-week prep plan + grocery list + **Shopping** + **Chores** |
-| **Finance** | Spending summary card, IOU, budgets, transactions |
-| **Profile** | Progress (weight/sleep/exercise) + Settings (profile, imports, Strava, cloud) |
+### `api/index.py`
+Replace `check_password()` with:
+```python
+def check_password(supplied=None, user=None):
+    if not config.APP_PASSWORD and not any(config.USER_PASSWORDS.values()):
+        return True
+    if supplied == config.APP_PASSWORD:
+        return True
+    if user and supplied == config.USER_PASSWORDS.get(user):
+        return True
+    return False
+```
 
-Pages currently at top level that move into a tab: Prices → Meals;
-Shopping/Chores → Plan; Mood → Calendar; Progress/Settings → Profile.
-Dashboard stays Home.
+Add endpoint:
+```python
+@app.post("/api/login")
+def login():
+    body = request.get_json(force=True) or {}
+    uid = str(body.get("user", "")).strip()
+    pw = str(body.get("password", "")).strip()
+    if uid not in config.USER_FILES:
+        return jsonify(error="Invalid user"), 400
+    if not check_password(pw, uid):
+        return jsonify(error="Invalid password"), 401
+    return jsonify(ok=True, user=uid)
+```
 
-## Implementation notes
+Update all existing `check_password()` calls to pass the user's password header where applicable. For endpoints that don't have a user context (like `/api/state` GET), we keep checking the master password or any valid user password via header.
 
-- Pure CSS + HTML restructure + minimal `app.js` routing changes (tab ids,
-  renderer calls, bottom-nav active states, hash sync). No backend changes.
-- Keep existing element IDs so imperative renderers keep working where possible.
-- Update design tokens in `static/style.css` + `.interface-design/system.md`.
-- Dark mode = token-only overrides, same as today.
-- Mobile-first; `@media(max-width:760px)` tuned; desktop keeps a sane max-width.
-- Keep `prefers-reduced-motion` support.
+Wait — actually, to keep it simple: **all endpoints continue to use the same `X-App-Password` header**. The frontend just knows which user's password to send. The `/api/login` endpoint is purely for validation; after login, the frontend sends the same password header on every request.
 
-## Current progress (last updated 2026-09-23)
+So `check_password()` becomes:
+```python
+def check_password(supplied=None, user=None):
+    if not config.APP_PASSWORD and not any(config.USER_PASSWORDS.values()):
+        return True
+    if not supplied:
+        return False
+    if supplied == config.APP_PASSWORD:
+        return True
+    if user and supplied == config.USER_PASSWORDS.get(user):
+        return True
+    # If no user specified but the password matches any user's password, allow it
+    if any(supplied == p for p in config.USER_PASSWORDS.values() if p):
+        return True
+    return False
+```
 
-- ✅ Phase 0: Spec saved, GitHub ticket #6 created, skill updated with recurring workflow rules
-- ✅ Phase 1: Design tokens rewritten (red/maroon primary, warm off-white canvas, larger radius)
-- ✅ Phase 1: Global shell rebuilt — bottom nav (6 tabs), hero/app bar restyled, sub-tab system added
-- ✅ Phase 2: Home dashboard restyled (stats, health ring, plate, water, macros, weekly summary)
-- ✅ Phase 3: Calendar + Mood merged with Month/List/Mood sub-tabs
-- ✅ Phase 4: Finance redesigned (red-gradient hero card, frosted pending sub-cards, budget rows)
-- ✅ Phase 5: Meals/Plan/Profile pages restyled via shared component updates
-- ✅ Phase 6: Dark mode tokens updated, mobile responsive tuned, docs synced
-- ✅ Extra: Profile display name changed from "BOok" → "book" across codebase
+This means:
+- `/api/login` passes `user` explicitly to validate that specific user's password
+- All other endpoints just check the header against any valid password
 
-**Commits:** `1ceadeb` (redesign), `ec4b8d0` (skill push rule), `03ba893` (BOok→book)
+## Frontend changes
 
-## Files touched
+### `templates/index.html`
+Add a login overlay `<div id="loginOverlay">` as the first child of `<body>`:
+- App logo + title
+- Two profile buttons: "book" and "jingjing" (with icons)
+- Password input
+- "Remember me" checkbox
+- "Sign in" button
+- Error message area
 
-- `templates/index.html` — shell, bottom nav, page sections reorganized.
-- `static/style.css` — full restyle (tokens + components + dark mode).
-- `static/app.js` — tab routing, new renderers/composition for moved pages.
-- `.interface-design/system.md` — updated tokens + component patterns.
-- `state.md`, `TASKS.md`, this file — docs kept in sync.
+The overlay has `display:none` once logged in.
+
+### `static/app.js`
+New global:
+```js
+let loginToken = localStorage.getItem("mealTrackerLogin") || "";
+let loggedInUser = null;
+```
+
+On boot (`init()`):
+1. Show login overlay
+2. If `loginToken` exists in `localStorage` and has a `user:password` format, try auto-login
+3. On profile button click, set `selectedUser`
+4. On "Sign in", POST `/api/login` with `{user, password}`
+5. On success: hide overlay, set `loginToken = password`, store if remember me, call `loadCloud()`
+
+Update `api()` helper to always include `X-App-Password: loginToken` if set.
+
+Update `loadCloud()` to use the logged-in user as `active_user` if not already set.
+
+Add logout button in Settings.
+
+### `static/style.css`
+Add:
+- `.login-overlay` — fixed full-screen, flex center, soft background blur or solid cream background
+- `.login-card` — white card, large radius, shadow, max-width 360px
+- `.login-profiles` — two big tap targets for profile selection
+- `.login-profile.active` — highlighted state
+- Input + button styles reuse existing tokens
+
+## Data model
+No changes to JSON schema.
+
+## Testing
+1. `flask --app api/index.py run`
+2. Open `http://127.0.0.1:5000/`
+3. See login overlay
+4. Pick "book", enter wrong password → error
+5. Enter correct password (or if no env set, any password works) → app loads
+6. Check "remember me" → close tab → reopen → still logged in
+7. Click logout → back to login overlay
+8. Test that all existing tabs/features still work
+
+## Files
+- `api/config.py`
+- `api/index.py`
+- `templates/index.html`
+- `static/app.js`
+- `static/style.css`
+- `state.md`
+- `TASKS.md`

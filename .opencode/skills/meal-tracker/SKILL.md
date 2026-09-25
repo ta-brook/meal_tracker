@@ -74,12 +74,12 @@ A Flask app deployed on Vercel for two profiles: **book** (male) and **jingjing*
 
 ## Backend conventions (`api/`)
 
-- Env vars: `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_BRANCH` (default `main`), `APP_PASSWORD` (optional). Read in `api/config.py`.
+- Env vars: `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_BRANCH` (default `main`), `APP_PASSWORD` (optional master fallback), `BOOK_PASSWORD`, `JINGJING_PASSWORD` (per-user). Read in `api/config.py`.
 - **GitHub paths are repo-root** (`book/state.json`, `jingjing/state.json`, `meals.json`) via `USER_FILES`/`MEALS_FILE`; `data/` is prepended only for the local fallback.
 - **Writes are atomic**: `commit_files()` creates ONE commit for all changed files (both users + shared meals together, or catalog csv+xlsx together). Either all files update or none. On a 409 branch race it re-reads the head and retries once, then surfaces `RuntimeError("CONFLICT")` → the API returns 409.
 - `PUT|POST /api/state` accepts `{users, meals?, message}`; only files whose content actually changed are written (no-op saves are skipped).
-- Auth: optional shared `APP_PASSWORD` on data endpoints (`check_password`). `GET /api/meal-catalog` and downloads stay open.
-- Endpoints: `GET /` (page), `GET /sw.js`, `GET /manifest.json`, `GET /api/config`, `GET /api/state` (`{users, meals, shopping, calendar, finance, chores}`), `PUT|POST /api/state` (writes any changed shared files atomically), `GET|POST /api/meal-catalog` (GET open), `DELETE /api/meal-catalog`, `GET /api/prices` (open), `POST /api/prices/refresh` (auth + GitHub only), `GET /download/meals.csv`, `GET /download/meals.xlsx`.
+- Auth: optional per-user passwords (`BOOK_PASSWORD`, `JINGJING_PASSWORD`) plus master `APP_PASSWORD` fallback. All via `X-App-Password` header. Frontend login overlay picks profile then `POST /api/login`.
+- Endpoints: `GET /` (page), `GET /sw.js`, `GET /manifest.json`, `GET /api/config`, `POST /api/login`, `GET /api/state` (`{users, meals, shopping, calendar, finance, chores}`), `PUT|POST /api/state` (writes any changed shared files atomically), `GET|POST /api/meal-catalog` (GET open), `DELETE /api/meal-catalog`, `GET /api/prices` (open), `POST /api/prices/refresh` (auth + GitHub only), `GET /download/meals.csv`, `GET /download/meals.xlsx`.
 - **`POST /api/import/file`** — upload Garmin CSV or Apple Health ZIP/XML (multipart: `file`, `user`, `source`). Parses, merges deduplicated health data into the user's profile. Returns `{ok, summary, source}`.
 - **`GET /api/strava/auth`** — returns Strava OAuth URL for the user to connect.
 - **`GET /api/strava/callback`** — OAuth callback; exchanges code for tokens, stores them, redirects home.
@@ -93,7 +93,7 @@ Columns: `week, meal, meal_name, gender, kcal, protein_g, carbs_g, fat_g, ingred
 
 ## Frontend conventions (`static/app.js`)
 
-- Global `state = {users: {book, jingjing}, meals: [], active_user}`; `KEY = "mealTrackerV4"` for localStorage, `mealTrackerPassword` in sessionStorage.
+- Global `state = {users: {book, jingjing}, meals: [], active_user}`; `KEY = "mealTrackerV4"` for localStorage, `LOGIN_KEY = KEY + "_login"` stores `{user,token}` for remember-me.
 - **Shared meals**: `state.meals` is app-wide. `loadCloud()` reads `{users, meals}`; legacy per-user `meals` are auto-merged into the shared list once (`migrateSharedMeals`) with a toast. Add/delete operate on `state.meals`; deleting a shared meal also strips its id from **both** users' logs; `clearData` never touches shared meals.
 - Keep IDs stable across frontend/backend: user keys, meal ids, catalog rows (`findMeal`, `planMeals`).
 - Rendering is imperative (`renderAll` → dashboard/meals/planView/progress/settings); `renderUserSwitch()` at the top of each render; escape user content with `esc()`.

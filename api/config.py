@@ -4,6 +4,13 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
+BOOK_PASSWORD = os.getenv("BOOK_PASSWORD")
+JINGJING_PASSWORD = os.getenv("JINGJING_PASSWORD")
+
+USER_PASSWORDS = {
+    "book": BOOK_PASSWORD,
+    "jingjing": JINGJING_PASSWORD,
+}
 
 # Strava API (optional — for auto-syncing workouts from Garmin/Apple Watch via Strava)
 STRAVA_CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")

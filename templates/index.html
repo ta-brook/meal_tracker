@@ -19,6 +19,30 @@
 </head>
 <body>
 
+<div id="loginOverlay" class="login-overlay hidden">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-logo">🥗</div>
+      <h1>Meal Tracker</h1>
+      <p>Meal prep • calories • macros • weight progress</p>
+    </div>
+    <div class="login-profiles">
+      <button class="login-profile" data-user="book">
+        <span class="login-avatar">👨</span>
+        <b>book</b>
+      </button>
+      <button class="login-profile" data-user="jingjing">
+        <span class="login-avatar">👩</span>
+        <b>jingjing</b>
+      </button>
+    </div>
+    <label class="login-label">Password<input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password"></label>
+    <label class="login-remember"><input id="loginRemember" type="checkbox" checked> Remember me</label>
+    <button class="primary login-btn" id="loginSubmit">Sign in</button>
+    <p class="login-error" id="loginError"></p>
+  </div>
+</div>
+
 <header class="hero">
   <div>
     <h1>🥗 Meal Tracker</h1>
@@ -368,9 +392,8 @@
       <p class="muted" id="stravaStatus" style="margin-top:8px"></p>
       <hr>
       <h3>Cloud connection</h3>
-      <label>App password<input id="passwordInput" type="password" autocomplete="current-password"></label>
-      <button class="primary" id="loginBtn">Connect / reload cloud data</button>
-      <p class="muted">The app password is a shared secret for this app, not a user's personal password.</p>
+      <p class="muted">Signed in as <b id="loggedInUserLabel">—</b></p>
+      <button class="secondary" id="logoutBtn">Sign out</button>
       <button class="secondary" id="restoreBackup">Restore last backup</button>
       <hr>
       <h3>Appearance</h3>
