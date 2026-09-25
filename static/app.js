@@ -738,14 +738,16 @@ class PixelWalker {
     this._start();
   }
   _src(d){return `/static/assets/walker/${d}.png`}
-  _face(d){this.sprite.src=this._src(d);}
+  _walkGif(){return `/static/assets/walker/walk_south.gif`}
+  _face(d){const s=this._src(d);if(!this.sprite.src.endsWith(`${d}.png`))this.sprite.src=s;}
+  _setWalkGif(){const g=this._walkGif();if(!this.sprite.src.endsWith("walk_south.gif"))this.sprite.src=g;}
   _setDir(dx){
     this.dir = dx>0?1:-1;
     const d = dx>0?"right":"left";
     this._face(WALKER_DIRS[d]);
   }
   _start(){
-    this._face(this.dir>0?"east":"west");
+    this._setWalkGif();
     this._updatePos();
     this._raf = requestAnimationFrame(this._tick);
   }
@@ -758,11 +760,11 @@ class PixelWalker {
     const w = window.innerWidth;
     if(this.state === "walk"){
       this.x += this.dir*this.speed*(dt/1000);
-      const bob = Math.sin(ts/120)*-3;
-      this.sprite.style.transform = `translate(${this.x}px,${this.y+bob}px) scaleX(${this.dir>0?1:-1})`;
-      this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(${1-Math.abs(bob)/12})`;
-      if(this.x <= 0){this.x=0;this.dir=1;this._face("east");}
-      if(this.x >= w-48){this.x=w-48;this.dir=-1;this._face("west");}
+      // GIF handles leg animation; just slide horizontally
+      this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
+      this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1)`;
+      if(this.x <= 0){this.x=0;this.dir=1;}
+      if(this.x >= w-48){this.x=w-48;this.dir=-1;}
       if(Math.random() < .0015){this._enterIdle()}
     } else if(this.state === "idle"){
       this.stateTimer -= dt;
@@ -780,7 +782,7 @@ class PixelWalker {
   }
   _enterWalk(){
     this.state="walk";this.speed=35+Math.random()*25;
-    this._face(this.dir>0?"east":"west");
+    this._setWalkGif();
   }
   _enterIdle(){
     this.state="idle";this.stateTimer=1500+Math.random()*2000;
