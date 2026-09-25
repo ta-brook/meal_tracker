@@ -841,6 +841,43 @@ class PixelWalker {
       const w=window.innerWidth;this.x=Math.max(-20,Math.min(w-28,this.x));
     }
   }
+  _drop(){
+    // physics drop with gravity + bounce + squash
+    const startY = this.y;
+    const targetY = 0;
+    const dist = startY - targetY;
+    if(dist <= 2){this._enterWalk();return}
+    let vy = 0;
+    const gravity = 1.2;
+    const bounce = .45;
+    const ground = targetY;
+    let squash = 1;
+    let stretch = 1;
+    const step = ()=>{
+      vy += gravity;
+      this.y += vy;
+      // stretch while falling
+      stretch = 1 + Math.min(vy/40, .15);
+      if(this.y >= ground){
+        this.y = ground;
+        if(Math.abs(vy) > 3){
+          vy = -vy * bounce;
+          squash = 1 + Math.min(Math.abs(vy)/30, .25);
+          stretch = 1 - (squash-1)*.6;
+        } else {
+          // settle
+          this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
+          this._enterWalk();
+          return;
+        }
+      }
+      this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scale(${stretch},${squash}) scaleX(${this.dir>0?1:-1})`;
+      squash += (1-squash)*.18;
+      stretch += (1-stretch)*.18;
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
   _onPointerUp(e){
     if(!this._downTime) return;
     const dt=Date.now()-this._downTime;
@@ -848,12 +885,7 @@ class PixelWalker {
     const dx=c.x-this._downX,dy=c.y-this._downY;
     if(this.dragging){
       this.dragging=false;this.el.classList.remove("dragging");
-      // snap y back to navbar line, keep x
-      this.y=0;
-      // little bounce on drop
-      this.sprite.style.transition="transform .18s cubic-bezier(.23,1,.32,1)";
-      this.sprite.style.transform=`translate(${this.x}px,${this.y-6}px) scaleX(${this.dir>0?1:-1})`;
-      setTimeout(()=>{this.sprite.style.transition="";this._enterWalk();},180);
+      this._drop();
     } else if(dt<300 && Math.abs(dx)<5 && Math.abs(dy)<5){
       this._doJump(c.x,c.y);
     }
