@@ -393,14 +393,14 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 [data-theme="dark"] .login-profile{background:var(--surface-tint)}
 [data-theme="dark"] .login-profile.active{background:var(--primary-soft)}
 
-.pixel-walker{position:fixed;left:0;right:0;bottom:56px;z-index:95;height:48px;pointer-events:none;overflow:visible}
-.pixel-walker img{position:absolute;bottom:0;width:48px;height:48px;image-rendering:pixelated;image-rendering:crisp-edges;transition:filter .15s;pointer-events:auto;cursor:grab;touch-action:none}
+.pixel-walker{position:fixed;left:0;right:0;bottom:56px;z-index:95;height:64px;pointer-events:none;overflow:visible}
+.pixel-walker img{position:absolute;bottom:0;width:64px;height:64px;image-rendering:pixelated;image-rendering:crisp-edges;transition:filter .15s;pointer-events:auto;cursor:grab;touch-action:none}
 .pixel-walker img:active{cursor:grabbing}
 .pixel-walker.dragging img{filter:drop-shadow(0 8px 12px rgba(0,0,0,.25));z-index:100}
-.pixel-walker .walker-shadow{position:absolute;bottom:2px;width:28px;height:6px;background:rgba(0,0,0,.12);border-radius:50%;filter:blur(1px);transform:translateX(10px);animation:shadowPulse .6s ease-in-out infinite alternate}
+.pixel-walker .walker-shadow{position:absolute;bottom:2px;width:36px;height:8px;background:rgba(0,0,0,.12);border-radius:50%;filter:blur(1px);transform:translateX(14px);animation:shadowPulse .6s ease-in-out infinite alternate}
 .pixel-walker.dragging .walker-shadow{opacity:.3}
 @keyframes walkerBob{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
-@keyframes shadowPulse{0%{transform:translateX(10px) scale(1)}100%{transform:translateX(10px) scale(.85)}}
+@keyframes shadowPulse{0%{transform:translateX(14px) scale(1)}100%{transform:translateX(14px) scale(.85)}}
 
 @media(max-width:760px){
   .hero{padding:14px 16px}

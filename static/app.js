@@ -753,7 +753,7 @@ class PixelWalker {
   }
   _updatePos(){
     this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
-    this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1)`;
+    this.shadow.style.transform = `translate(${this.x+14}px,${this.y+60}px) scale(1)`;
   }
   _tick(ts){
     const dt = 16.7;
@@ -762,9 +762,9 @@ class PixelWalker {
       this.x += this.dir*this.speed*(dt/1000);
       // GIF handles leg animation; just slide horizontally
       this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
-      this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1)`;
+      this.shadow.style.transform = `translate(${this.x+14}px,${this.y+60}px) scale(1)`;
       if(this.x <= 0){this.x=0;this.dir=1;}
-      if(this.x >= w-48){this.x=w-48;this.dir=-1;}
+      if(this.x >= w-64){this.x=w-64;this.dir=-1;}
       if(Math.random() < .0015){this._enterIdle()}
     } else if(this.state === "idle"){
       this.stateTimer -= dt;
@@ -776,7 +776,7 @@ class PixelWalker {
       if(this.stateTimer <= 0){this._enterWalk()}
     } else if(this.state === "drag"){
       this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
-      this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1.3)`;
+      this.shadow.style.transform = `translate(${this.x+14}px,${this.y+60}px) scale(1.3)`;
     }
     this._raf = requestAnimationFrame(this._tick);
   }
@@ -838,7 +838,7 @@ class PixelWalker {
       if(e.type==="touchmove") e.preventDefault();
       this.x=this._startX+dx;this.y=this._startY+dy;
       // keep roughly in bounds horizontally
-      const w=window.innerWidth;this.x=Math.max(-20,Math.min(w-28,this.x));
+      const w=window.innerWidth;this.x=Math.max(-20,Math.min(w-44,this.x));
     }
   }
   _drop(){
