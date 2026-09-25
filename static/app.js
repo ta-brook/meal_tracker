@@ -201,6 +201,41 @@ function hashTab(){let x=(location.hash||"").replace("#","");const map={dashboar
 window.addEventListener("hashchange",hashTab);
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 document.querySelectorAll(".sub-tab").forEach(b=>b.onclick=()=>{const section=b.closest("section");section.querySelectorAll(".sub-tab").forEach(s=>s.classList.toggle("active",s===b));section.querySelectorAll(".sub-pane").forEach(p=>p.hidden=p.id!==b.dataset.sub);});
+function weekNutrition(offset=0){
+  const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-(6+offset*7)+i);return dt.toISOString().slice(0,10)});
+  const totalsArr=days.map(d=>{const t=totals(d);return{...t,logged:(user().logs[d]||[]).length>0,date:d}});
+  const logged=totalsArr.filter(x=>x.logged);
+  const sums={kcal:0,protein:0,carbs:0,fat:0};
+  logged.forEach(x=>{sums.kcal+=x.kcal;sums.protein+=x.protein;sums.carbs+=x.carbs;sums.fat+=x.fat});
+  const n=logged.length||1;
+  return{days:logged.length,avg:{kcal:sums.kcal/n,protein:sums.protein/n,carbs:sums.carbs/n,fat:sums.fat/n},totalsArr};
+}
+function trendArrow(cur,prev,label=""){
+  if(!prev||prev===0||!cur)return"";
+  const diff=cur-prev, pct=Math.abs(Math.round(diff/prev*100));
+  const arrow=diff>0?"↑":diff<0?"↓":"→";
+  const color=diff>0?"var(--success-deep)":diff<0?"var(--danger-deep)":"var(--muted)";
+  return `<span style="color:${color};font-size:12px;font-weight:700;margin-left:4px" title="${label}: ${pct}% vs last week">${arrow} ${pct}%</span>`;
+}
+function renderWeeklyNutrition(){
+  const thisWeek=weekNutrition(0),lastWeek=weekNutrition(1);
+  const card=$("weeklyNutritionCard");
+  if(!card)return;
+  if(thisWeek.days===0){card.style.display="none";return}
+  card.style.display="";
+  $("weeklyNutritionSub").textContent=`${thisWeek.days}/7 days logged • avg per logged day`;
+  const ta=(k,label)=>trendArrow(thisWeek.avg[k],lastWeek.avg[k],label);
+  $("weeklyNutritionStats").innerHTML=[
+    `<article class="stat"><span>Calories${ta("kcal","Calories")}</span><strong>${Math.round(thisWeek.avg.kcal)}</strong><small>kcal</small></article>`,
+    `<article class="stat"><span>Protein${ta("protein","Protein")}</span><strong>${Math.round(thisWeek.avg.protein)}</strong><small>g</small></article>`,
+    `<article class="stat"><span>Carbs${ta("carbs","Carbs")}</span><strong>${Math.round(thisWeek.avg.carbs)}</strong><small>g</small></article>`,
+    `<article class="stat"><span>Fat${ta("fat","Fat")}</span><strong>${Math.round(thisWeek.avg.fat)}</strong><small>g</small></article>`,
+  ].join("");
+  const t=user().target||2000;
+  $("weeklyNutritionBars").innerHTML=[
+    ["Calories","kcal",t],["Protein","protein",user().protein_goal],["Carbs","carbs",user().carbs_goal],["Fat","fat",user().fat_goal]
+  ].filter(([,_,g])=>g>0).map(([label,key,goal])=>{const p=Math.min(100,Math.round(thisWeek.avg[key]/goal*100));return `<div class="hrow"><span>${label}</span><div class="hbar"><i style="width:${p}%"></i></div><b>${Math.round(thisWeek.avg[key])}/${goal}</b></div>`}).join("")||'<p class="muted">No macro targets set.</p>';
+}
 function dashboard(){
   renderUserSwitch();const d=$("datePicker").value||today(),t=totals(d),p=user().target?Math.min(100,Math.round(t.kcal/user().target*100)):0,ps=planMeals(),pk=ps.reduce((a,x)=>a+x.kcal,0);
   $("todayLabel").textContent=d===today()?"Today":d;["kcal","protein","carbs","fat"].forEach((k,i)=>$( ["calTotal","proteinTotal","carbsTotal","fatTotal"][i]).textContent=Math.round(t[k]));$("calTarget").textContent=Math.round(user().target);$("calPercent").textContent=p+"%";$("calBar").style.width=p+"%";$("remainingText").textContent=t.kcal<=user().target?Math.round(user().target-t.kcal)+" kcal remaining":Math.round(t.kcal-user().target)+" kcal over target";$("planKcalBadge").textContent=`Week ${week} • ${Math.round(pk)} planned kcal`;
@@ -209,7 +244,7 @@ function dashboard(){
   $("plannedToday").innerHTML=ps.map((m,i)=>{const logged=logs(d).includes(m.id);return `<div class="list-item"><span><b>Meal ${i+1} — ${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="${logged?"logged":"primary"}" ${logged?"disabled":""} onclick="logMeal('${m.id}')">${logged?"✓ Logged today":"Log meal"}</button></div>`}).join("")||'<p class="muted">No plan data found.</p>';
   $("todayMeals").innerHTML=logs(d).map(id=>{const m=findMeal(id);return m?`<div class="list-item"><span><b>${esc(m.name)}</b><br><small>${m.kcal} kcal • P ${m.protein}g • C ${m.carbs}g • F ${m.fat}g</small></span><button class="danger" onclick="removeLog('${id}')">Remove</button></div>`:""}).join("")||'<p class="muted">No meals logged for this day.</p>';
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);const ds=dt.toISOString().slice(0,10);return{d:ds,t:totals(ds)}});$("weeklySummary").innerHTML=days.map(x=>`<div class="mini-day"><b>${x.d.slice(5)}</b><span>${Math.round(x.t.kcal)} kcal</span><div class="mini-progress"><i style="width:${Math.min(100,Math.round(x.t.kcal/user().target*100))}%"></i></div></div>`).join("");$("adherence").textContent=`${days.filter(x=>x.t.kcal>0).length}/7 days logged`;const streak=loggingStreak();$("streakTag").textContent=streak>1?`🔥 ${streak}-day streak`:streak===1?"🔥 Logged today":"";
-  renderPlate(d,p);macroHtml();renderWater();renderActivity();renderWeeklyActivity();renderHub(d);renderHomeChores();renderHealthSummary();
+  renderPlate(d,p);macroHtml();renderWater();renderActivity();renderWeeklyNutrition();renderWeeklyActivity();renderHub(d);renderHomeChores();renderHealthSummary();
 }
 const PLATE_FOOD=["🥗","🍗","🍚","🥩","🍜","🥦","🍤","🍛"];
 function renderPlate(d,p){
@@ -259,6 +294,7 @@ function renderActivity(){
 
 function renderWeeklyActivity(){
   const days=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-6+i);return dt.toISOString().slice(0,10)});
+  const prevDays=Array.from({length:7},(_,i)=>{const dt=new Date();dt.setDate(dt.getDate()-13+i);return dt.toISOString().slice(0,10)});
   const daily=user().health?.daily||{};
   const sleep=user().health?.sleep||[];
   const exercise=user().health?.exercise||[];
@@ -266,8 +302,10 @@ function renderWeeklyActivity(){
   if(!card)return;
 
   const stepVals=days.map(d=>daily[d]?.steps||0).filter(s=>s>0);
+  const prevStepVals=prevDays.map(d=>daily[d]?.steps||0).filter(s=>s>0);
   const burnVals=days.map(d=>daily[d]?.active_calories||0).filter(c=>c>0);
   const sleepVals=days.map(d=>{const s=sleep.find(x=>x.date===d);return s?s.hours:0}).filter(h=>h>0);
+  const prevSleepVals=prevDays.map(d=>{const s=sleep.find(x=>x.date===d);return s?s.hours:0}).filter(h=>h>0);
   const workoutCount=days.filter(d=>exercise.some(e=>e.date===d)).length;
 
   const hasData=stepVals.length||burnVals.length||sleepVals.length||workoutCount;
@@ -275,13 +313,16 @@ function renderWeeklyActivity(){
   card.style.display="";
 
   const totalSteps=stepVals.reduce((a,b)=>a+b,0);
+  const avgSteps=stepVals.length?totalSteps/stepVals.length:0;
+  const prevAvgSteps=prevStepVals.length?prevStepVals.reduce((a,b)=>a+b,0)/prevStepVals.length:0;
   const totalBurn=burnVals.reduce((a,b)=>a+b,0);
   const avgSleep=sleepVals.length?(sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length):0;
+  const prevAvgSleep=prevSleepVals.length?(prevSleepVals.reduce((a,b)=>a+b,0)/prevSleepVals.length):0;
 
   const stats=[];
-  if(stepVals.length)stats.push(`<article class="stat"><span>Steps</span><strong>${Math.round(totalSteps).toLocaleString()}</strong><small>${Math.round(totalSteps/stepVals.length).toLocaleString()}/day</small></article>`);
+  if(stepVals.length)stats.push(`<article class="stat"><span>Steps${trendArrow(avgSteps,prevAvgSteps,"Steps")}</span><strong>${Math.round(totalSteps).toLocaleString()}</strong><small>${Math.round(avgSteps).toLocaleString()}/day</small></article>`);
   if(burnVals.length)stats.push(`<article class="stat"><span>Burned</span><strong>${Math.round(totalBurn)}</strong><small>kcal total</small></article>`);
-  if(sleepVals.length)stats.push(`<article class="stat"><span>Sleep</span><strong>${avgSleep.toFixed(1)}</strong><small>h avg</small></article>`);
+  if(sleepVals.length)stats.push(`<article class="stat"><span>Sleep${trendArrow(avgSleep,prevAvgSleep,"Sleep")}</span><strong>${avgSleep.toFixed(1)}</strong><small>h avg</small></article>`);
   if(workoutCount)stats.push(`<article class="stat"><span>Workouts</span><strong>${workoutCount}</strong><small>days</small></article>`);
   $("weeklyActivity").innerHTML=stats.join("");
 }
@@ -365,7 +406,10 @@ function progress(){
   renderUserSwitch();
   const w=[...user().weights].sort((a,b)=>a.date.localeCompare(b.date)),cur=w.at(-1)?.weight,first=w[0]?.weight;
   $("currentWeight").textContent=cur??"—";$("goalWeight").textContent=user().goal??"—";$("weightChange").textContent=cur!=null&&first!=null?(cur-first).toFixed(1):"—";
-  const r=w.filter(x=>Date.now()-new Date(x.date).getTime()<=604800000);$("avgWeight").textContent=r.length?(r.reduce((a,x)=>a+x.weight,0)/r.length).toFixed(1):"—";
+  const r=w.filter(x=>Date.now()-new Date(x.date).getTime()<=604800000);const avg=r.length?(r.reduce((a,x)=>a+x.weight,0)/r.length):null;
+  const prevR=w.filter(x=>{const t=Date.now()-new Date(x.date).getTime();return t>604800000&&t<=1209600000});
+  const prevAvg=prevR.length?(prevR.reduce((a,x)=>a+x.weight,0)/prevR.length):null;
+  $("avgWeight").innerHTML=avg!=null?`<strong>${avg.toFixed(1)}</strong><small>kg ${trendArrow(avg,prevAvg,"Weight")}</small>`:"<strong>—</strong><small>kg</small>";
   const h=user().height,bmi=cur!=null&&h?cur/Math.pow(h/100,2):null,goal=user().goal,line=[];
   if(bmi)line.push(`BMI ${bmi.toFixed(1)}`);if(cur!=null&&goal)line.push(cur>goal?`${(cur-goal).toFixed(1)} kg over goal`:`${(goal-cur).toFixed(1)} kg to goal`);
   $("goalLine").textContent=line.join(" • ");
