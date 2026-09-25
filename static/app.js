@@ -401,6 +401,16 @@ function progress(){
     $("exerciseList").innerHTML=ex.slice().reverse().map(e=>`<div class="list-item"><span><b>${esc(e.type)}</b><br><small>${e.date}${e.duration?` • ${e.duration} min`:""}${e.distance?` • ${e.distance} km`:""}${e.calories?` • ${Math.round(e.calories)} kcal`:""}${e.hr_avg?` • HR ${Math.round(e.hr_avg)}`:""}</small></span></div>`).join("");
   }
 }
+function applyWalker(){
+  const show=localStorage.getItem(KEY+"_walker")!=="false";
+  $("pixelWalker").hidden=!show;
+  if($("walkerToggle")) $("walkerToggle").checked=show;
+  if(show){
+    if(!walkerInstance) walkerInstance=new PixelWalker();
+  } else {
+    if(walkerInstance){walkerInstance.destroy();walkerInstance=null}
+  }
+}
 function settings(){
   renderUserSwitch();
   $("profileName").value=user().name;$("genderProfile").value=user().gender;$("targetInput").value=user().target;$("goalInput").value=user().goal??"";$("ageInput").value=user().age??"";$("heightInput").value=user().height??"";$("proteinGoal").value=user().protein_goal??"";$("carbsGoal").value=user().carbs_goal??"";$("fatGoal").value=user().fat_goal??"";
@@ -411,6 +421,7 @@ function settings(){
   const srcList=Object.entries(src).map(([k,v])=>`${k}: ${new Date(v).toLocaleDateString()}`).join(", ");
   $("healthImportSummary").textContent=`${h.sleep.length} sleep • ${h.exercise.length} workouts • ${dailyCount} daily metrics${srcList?` • last import: ${srcList}`:""}`;
   renderStravaStatus();
+  applyWalker();
 }
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"book":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;const h=$("heightInput").value;user().height=h?Math.max(1,Math.min(250,Math.round(n(h)))):null;const mg=id=>{const v=$(id).value;return v?Math.max(0,Math.round(n(v))):null};user().protein_goal=mg("proteinGoal");user().carbs_goal=mg("carbsGoal");user().fat_goal=mg("fatGoal");queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("logoutBtn").onclick=()=>{clearLogin();location.reload()};
@@ -425,6 +436,7 @@ function applyTheme(){const t=localStorage.getItem(KEY+"_theme")||"auto";const d
 function cycleTheme(){const order=["auto","light","dark"],t=localStorage.getItem(KEY+"_theme")||"auto",next=order[(order.indexOf(t)+1)%order.length];localStorage.setItem(KEY+"_theme",next);applyTheme();toast(next==="auto"?"Theme: auto (system)":next==="light"?"Theme: light":"Theme: dark")}
 $("themeToggle").onclick=cycleTheme;
 $("themeSelect").onchange=()=>{localStorage.setItem(KEY+"_theme",$("themeSelect").value);applyTheme()};
+$("walkerToggle").onchange=()=>{localStorage.setItem(KEY+"_walker",$("walkerToggle").checked);applyWalker();toast($("walkerToggle").checked?"Pixel companion enabled":"Pixel companion hidden")};
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if((localStorage.getItem(KEY+"_theme")||"auto")==="auto")applyTheme()});
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;const b=$("installBtn");if(b)b.hidden=false});
@@ -627,7 +639,7 @@ $("settleAllBtn").onclick=()=>{const txs=(state.finance.transactions||[]).filter
 setInterval(async()=>{if(!persistent||pendingMessages.length)return;try{const s=await api("/api/state");let changed=false;for(const k of ["shopping","calendar","finance","chores"]){if(JSON.stringify(s[k])!==JSON.stringify(state[k])){state[k]=s[k];changed=true}}if(changed)renderAll()}catch(e){}},25000);
 function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings()}
 function showLogin(){$("loginOverlay").classList.remove("hidden");document.body.style.overflow="hidden";$("headerLogout").hidden=true;$("pixelWalker").hidden=true;if(walkerInstance){walkerInstance.destroy();walkerInstance=null}}
-function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow="";$("headerLogout").hidden=false;$("pixelWalker").hidden=false}
+function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow="";$("headerLogout").hidden=false;applyWalker();}
 function setLoginError(msg){$("loginError").textContent=msg||""}
 
 let selectedLoginUser = null;
@@ -657,7 +669,7 @@ $("loginSubmit").onclick=async()=>{
     setBanner("Loading…","info");
     try{await loadCloud()}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
     await loadCatalog();await loadPrices();renderAll();toast("✓ Signed in as "+loggedInUser);
-    if(!walkerInstance) walkerInstance = new PixelWalker();
+    applyWalker();
   }catch(e){setLoginError("Network error — try again.");}
 };
 
@@ -695,7 +707,7 @@ async function boot(){
   const sp=new URLSearchParams(location.search);
   if(sp.get("strava")==="connected"){toast("✓ Strava connected");history.replaceState(null,"",location.pathname+location.hash)}
   if(sp.get("strava")==="error"){toast("Strava connection failed",false);history.replaceState(null,"",location.pathname+location.hash)}
-  if(!walkerInstance) walkerInstance = new PixelWalker();
+  applyWalker();
 }
 
 // --- Pixel Walker (Dark Lord) ---
