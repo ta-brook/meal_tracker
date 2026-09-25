@@ -711,15 +711,30 @@ class PixelWalker {
     this.shadow = this.el.querySelector(".walker-shadow");
     if(!this.el||!this.sprite) return;
     this.x = Math.random()*Math.max(100,window.innerWidth-100);
+    this.y = 0;
     this.speed = 35 + Math.random()*25;
     this.dir = Math.random()>.5?1:-1;
-    this.state = "walk"; // walk | idle | facing
+    this.state = "walk"; // walk | idle | facing | drag
     this.stateTimer = 0;
-    this.targetX = null;
     this._raf = null;
     this._tick = this._tick.bind(this);
-    this._boundClick = this._onClick.bind(this);
-    this.el.addEventListener("click",this._boundClick);
+    // drag state
+    this.dragging = false;
+    this._downTime = 0;
+    this._downX = 0;
+    this._downY = 0;
+    this._offsetX = 0;
+    this._offsetY = 0;
+    // bind handlers
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this._onPointerMove = this._onPointerMove.bind(this);
+    this._onPointerUp = this._onPointerUp.bind(this);
+    this.sprite.addEventListener("mousedown",this._onPointerDown);
+    this.sprite.addEventListener("touchstart",this._onPointerDown,{passive:false});
+    document.addEventListener("mousemove",this._onPointerMove);
+    document.addEventListener("touchmove",this._onPointerMove,{passive:false});
+    document.addEventListener("mouseup",this._onPointerUp);
+    document.addEventListener("touchend",this._onPointerUp);
     this._start();
   }
   _src(d){return `/static/assets/walker/${d}.png`}
@@ -735,33 +750,31 @@ class PixelWalker {
     this._raf = requestAnimationFrame(this._tick);
   }
   _updatePos(){
-    const w = window.innerWidth;
-    this.sprite.style.transform = `translateX(${this.x}px) scaleX(${this.dir>0?1:-1})`;
-    this.shadow.style.transform = `translateX(${this.x+10}px) scale(1)`;
+    this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
+    this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1)`;
   }
   _tick(ts){
-    const dt = 16.7; // assume ~60fps
+    const dt = 16.7;
     const w = window.innerWidth;
     if(this.state === "walk"){
       this.x += this.dir*this.speed*(dt/1000);
-      // bobbing
       const bob = Math.sin(ts/120)*-3;
-      this.sprite.style.transform = `translateX(${this.x}px) scaleX(${this.dir>0?1:-1}) translateY(${bob}px)`;
-      this.shadow.style.transform = `translateX(${this.x+10}px) scale(${1-Math.abs(bob)/12})`;
-      // edge turn
+      this.sprite.style.transform = `translate(${this.x}px,${this.y+bob}px) scaleX(${this.dir>0?1:-1})`;
+      this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(${1-Math.abs(bob)/12})`;
       if(this.x <= 0){this.x=0;this.dir=1;this._face("east");}
       if(this.x >= w-48){this.x=w-48;this.dir=-1;this._face("west");}
-      // random idle
       if(Math.random() < .0015){this._enterIdle()}
     } else if(this.state === "idle"){
       this.stateTimer -= dt;
-      // gentle breathe
       const breathe = Math.sin(ts/300)*-1.5;
-      this.sprite.style.transform = `translateX(${this.x}px) scaleX(${this.dir>0?1:-1}) translateY(${breathe}px)`;
+      this.sprite.style.transform = `translate(${this.x}px,${this.y+breathe}px) scaleX(${this.dir>0?1:-1})`;
       if(this.stateTimer <= 0){this._enterWalk()}
     } else if(this.state === "facing"){
       this.stateTimer -= dt;
       if(this.stateTimer <= 0){this._enterWalk()}
+    } else if(this.state === "drag"){
+      // position updated in _onPointerMove; shadow stays near bottom
+      this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1.3)`;
     }
     this._raf = requestAnimationFrame(this._tick);
   }
@@ -779,19 +792,62 @@ class PixelWalker {
     const d = WALKER_DIRS[dirKey] || "south";
     this._face(d);
   }
-  _onClick(){
-    // click = surprised jump
+  _doJump(){
     this.sprite.style.transition="transform .15s ease";
-    this.sprite.style.transform=`translateX(${this.x}px) scaleX(${this.dir>0?1:-1}) translateY(-10px) scale(1.1)`;
+    this.sprite.style.transform=`translate(${this.x}px,${this.y-10}px) scaleX(${this.dir>0?1:-1}) scale(1.1)`;
     setTimeout(()=>{this.sprite.style.transition="";this._enterIdle();},300);
   }
   faceTab(tabName){
     const map={home:"down",meals:"down",calendar:"up",plan:"up",finance:"down",profile:"down"};
     this._enterFacing(map[tabName]||"down",1200);
   }
+  _client(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}}
+  _onPointerDown(e){
+    const c=this._client(e);
+    this._downTime=Date.now();this._downX=c.x;this._downY=c.y;
+    this._offsetX=c.x-this.x;this._offsetY=c.y-(this.el.getBoundingClientRect().top+this.y);
+    if(e.type==="touchstart") e.preventDefault();
+  }
+  _onPointerMove(e){
+    if(!this._downTime) return;
+    const c=this._client(e);
+    const dx=c.x-this._downX,dy=c.y-this._downY;
+    if(!this.dragging && (Math.abs(dx)>4||Math.abs(dy)>4)){
+      this.dragging=true;this.state="drag";this.el.classList.add("dragging");
+    }
+    if(this.dragging){
+      if(e.type==="touchmove") e.preventDefault();
+      this.x=c.x-this._offsetX;this.y=c.y-this._offsetY;
+      // keep roughly in bounds
+      const w=window.innerWidth;this.x=Math.max(-20,Math.min(w-28,this.x));
+    }
+  }
+  _onPointerUp(e){
+    if(!this._downTime) return;
+    const dt=Date.now()-this._downTime;
+    const c=e.changedTouches?{x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY}:{x:e.clientX,y:e.clientY};
+    const dx=c.x-this._downX,dy=c.y-this._downY;
+    if(this.dragging){
+      this.dragging=false;this.el.classList.remove("dragging");
+      // snap y back to navbar line, keep x
+      this.y=0;
+      // little bounce on drop
+      this.sprite.style.transition="transform .18s cubic-bezier(.23,1,.32,1)";
+      this.sprite.style.transform=`translate(${this.x}px,${this.y-6}px) scaleX(${this.dir>0?1:-1})`;
+      setTimeout(()=>{this.sprite.style.transition="";this._enterWalk();},180);
+    } else if(dt<300 && Math.abs(dx)<5 && Math.abs(dy)<5){
+      this._doJump();
+    }
+    this._downTime=0;
+  }
   destroy(){
     if(this._raf) cancelAnimationFrame(this._raf);
-    this.el.removeEventListener("click",this._boundClick);
+    this.sprite.removeEventListener("mousedown",this._onPointerDown);
+    this.sprite.removeEventListener("touchstart",this._onPointerDown);
+    document.removeEventListener("mousemove",this._onPointerMove);
+    document.removeEventListener("touchmove",this._onPointerMove);
+    document.removeEventListener("mouseup",this._onPointerUp);
+    document.removeEventListener("touchend",this._onPointerUp);
   }
 }
 
