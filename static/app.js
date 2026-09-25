@@ -412,6 +412,7 @@ function settings(){
 }
 $("saveProfile").onclick=async()=>{user().name=$("profileName").value.trim()||(state.active_user==="book"?"book":"jingjing");user().gender=$("genderProfile").value;user().target=n($("targetInput").value)||2000;const g=$("goalInput").value;user().goal=g?Number(g):null;const a=$("ageInput").value;user().age=a?Math.max(1,Math.round(n(a))):null;const h=$("heightInput").value;user().height=h?Math.max(1,Math.min(250,Math.round(n(h)))):null;const mg=id=>{const v=$(id).value;return v?Math.max(0,Math.round(n(v))):null};user().protein_goal=mg("proteinGoal");user().carbs_goal=mg("carbsGoal");user().fat_goal=mg("fatGoal");queueSave(`Update profile for ${user().name}`);renderAll();toast("✓ Profile saved")};
 $("logoutBtn").onclick=()=>{clearLogin();location.reload()};
+$("headerLogout").onclick=()=>{clearLogin();location.reload()};
 $("restoreBackup").onclick=async()=>{if(!confirm("Restore your last backed-up edits? This overwrites the current data."))return;try{const b=JSON.parse(localStorage.getItem(KEY+"_backup")||"null");if(!b?.users){toast("No backup found",false);return}state=b;migrate();localSave();queueSave("Restore last backup");renderAll();toast("✓ Backup restored")}catch(e){toast("Could not restore backup",false)}};
 $("clearData").onclick=async()=>{if(confirm(`Clear all data for ${user().name}?`)){const name=user().name,gender=user().gender,target=user().target;user().logs={};user().weights=[];user().water={};user().moods={};user().name=name;user().gender=gender;user().target=target;queueSave(`Clear data for ${user().name}`);renderAll();toast("User data cleared")}};
 function openModal(h){$("modalBody").innerHTML=h;$("modal").classList.remove("hidden")}function closeModal(){$("modal").classList.add("hidden")}$("closeModal").onclick=closeModal;$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
@@ -623,8 +624,8 @@ $("editBudgetBtn").onclick=()=>{const cur=(state.finance.budgets||{})[finMonth]|
 $("settleAllBtn").onclick=()=>{const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth&&!t.settled);if(!txs.length){toast("Nothing to settle",false);return}txs.forEach(t=>t.settled=true);queueSave("Settle all for "+finMonth);renderAll();toast("✓ All settled")};
 setInterval(async()=>{if(!persistent||pendingMessages.length)return;try{const s=await api("/api/state");let changed=false;for(const k of ["shopping","calendar","finance","chores"]){if(JSON.stringify(s[k])!==JSON.stringify(state[k])){state[k]=s[k];changed=true}}if(changed)renderAll()}catch(e){}},25000);
 function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings()}
-function showLogin(){$("loginOverlay").classList.remove("hidden");document.body.style.overflow="hidden"}
-function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow=""}
+function showLogin(){$("loginOverlay").classList.remove("hidden");document.body.style.overflow="hidden";$("headerLogout").hidden=true}
+function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow="";$("headerLogout").hidden=false}
 function setLoginError(msg){$("loginError").textContent=msg||""}
 
 let selectedLoginUser = null;
@@ -668,6 +669,7 @@ async function attemptAutoLogin(){
     if(!r.ok){clearLogin();return false}
     loginToken=saved.token;loggedInUser=saved.user;state.active_user=loggedInUser;
     localStorage.setItem(KEY+"Active",state.active_user);
+    $("headerLogout").hidden=false;
     return true;
   }catch(e){clearLogin();return false}
 }
