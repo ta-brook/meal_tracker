@@ -1,0 +1,36 @@
+{
+  "group_id": "4382202f-4b10-47b2-a310-5893c2718bd5",
+  "states": [
+    {
+      "character": {
+        "id": "0c8e6414-a488-429e-9145-dc92ca2ff761",
+        "name": "Idle",
+        "prompt": "Original pixel-art female Dungeon Master for a dark-fantasy dungeon RPG. Elegant ancient elven mage with a calm, mysterious expression.  Design: - Long silver-white hair - Pointed elf ears - Pale skin, violet eyes - Black and deep-purple mage robe - Elegant dark cloak with purple lining - Small gold magical ornaments - Subtle dark crown/headpiece - Tall black staff with glowing purple crystal - Slender, graceful silhouette - Powerful but composed presence  Style: - Dark fantasy + elegant high-fantasy mage - Inspired by the atmosphere of Dungeon Maker and Frieren, but completely original - Cute/chibi RPG proportions - Crisp 32\u00d732 or 48\u00d748 pixel-art character - Dark outline, limited palette - Black, purple, silver and muted gold - Clean pixel clusters - No gradients, no anti-aliasing  Animation: 4-frame idle animation: 1. Standing calmly 2. Slight breathing/hair movement 3. Purple magic briefly glowing around her hand 4. Return to idle  Transparent background, consistent framing and scale, no text, no UI, no environment.",
+        "size": {
+          "width": 64,
+          "height": 64
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-09-25T04:05:01.666050+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-09-25T04:38:09.644620"
+}

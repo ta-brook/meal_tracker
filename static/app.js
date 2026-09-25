@@ -183,6 +183,7 @@ function copyLastDay(){
 $("copyDayBtn").onclick=copyLastDay;
 const TABS=["home","meals","calendar","plan","finance","profile"];
 const TAB_GROUPS={home:["dashboard"],meals:["meals","prices"],calendar:["calendar"],plan:["plan","shopping","chores"],finance:["finance"],profile:["progress","settings"]};
+let walkerInstance = null;
 function tab(x){
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===x));
   const secs=TAB_GROUPS[x]||[x];
@@ -194,6 +195,7 @@ function tab(x){
   if(x==="finance")finance();
   if(x==="profile"){progress();settings()}
   history.replaceState(null,"","#"+x);
+  if(walkerInstance) walkerInstance.faceTab(x);
 }
 function hashTab(){let x=(location.hash||"").replace("#","");const map={dashboard:"home",prices:"meals",shopping:"plan",chores:"plan",mood:"calendar",progress:"profile",settings:"profile"};if(map[x])x=map[x];if(TABS.includes(x))tab(x)}
 window.addEventListener("hashchange",hashTab);
@@ -624,8 +626,8 @@ $("editBudgetBtn").onclick=()=>{const cur=(state.finance.budgets||{})[finMonth]|
 $("settleAllBtn").onclick=()=>{const txs=(state.finance.transactions||[]).filter(t=>t.date.slice(0,7)===finMonth&&!t.settled);if(!txs.length){toast("Nothing to settle",false);return}txs.forEach(t=>t.settled=true);queueSave("Settle all for "+finMonth);renderAll();toast("✓ All settled")};
 setInterval(async()=>{if(!persistent||pendingMessages.length)return;try{const s=await api("/api/state");let changed=false;for(const k of ["shopping","calendar","finance","chores"]){if(JSON.stringify(s[k])!==JSON.stringify(state[k])){state[k]=s[k];changed=true}}if(changed)renderAll()}catch(e){}},25000);
 function renderAll(){renderUserSwitch();dashboard();meals();planView();prices();shopping();chores();calendar();mood();finance();progress();settings()}
-function showLogin(){$("loginOverlay").classList.remove("hidden");document.body.style.overflow="hidden";$("headerLogout").hidden=true}
-function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow="";$("headerLogout").hidden=false}
+function showLogin(){$("loginOverlay").classList.remove("hidden");document.body.style.overflow="hidden";$("headerLogout").hidden=true;$("pixelWalker").hidden=true;if(walkerInstance){walkerInstance.destroy();walkerInstance=null}}
+function hideLogin(){$("loginOverlay").classList.add("hidden");document.body.style.overflow="";$("headerLogout").hidden=false;$("pixelWalker").hidden=false}
 function setLoginError(msg){$("loginError").textContent=msg||""}
 
 let selectedLoginUser = null;
@@ -655,6 +657,7 @@ $("loginSubmit").onclick=async()=>{
     setBanner("Loading…","info");
     try{await loadCloud()}catch(e){setBanner("💾 <b>Offline/local cache</b> — cloud data was not loaded.","warn")}
     await loadCatalog();await loadPrices();renderAll();toast("✓ Signed in as "+loggedInUser);
+    if(!walkerInstance) walkerInstance = new PixelWalker();
   }catch(e){setLoginError("Network error — try again.");}
 };
 
@@ -692,5 +695,104 @@ async function boot(){
   const sp=new URLSearchParams(location.search);
   if(sp.get("strava")==="connected"){toast("✓ Strava connected");history.replaceState(null,"",location.pathname+location.hash)}
   if(sp.get("strava")==="error"){toast("Strava connection failed",false);history.replaceState(null,"",location.pathname+location.hash)}
+  if(!walkerInstance) walkerInstance = new PixelWalker();
 }
+
+// --- Pixel Walker (Dark Lord) ---
+const WALKER_DIRS = {
+  right:"east",left:"west",up:"north",down:"south",
+  "up-right":"north-east","up-left":"north-west",
+  "down-right":"south-east","down-left":"south-west"
+};
+class PixelWalker {
+  constructor(){
+    this.el = $("pixelWalker");
+    this.sprite = $("walkerSprite");
+    this.shadow = this.el.querySelector(".walker-shadow");
+    if(!this.el||!this.sprite) return;
+    this.x = Math.random()*Math.max(100,window.innerWidth-100);
+    this.speed = 35 + Math.random()*25;
+    this.dir = Math.random()>.5?1:-1;
+    this.state = "walk"; // walk | idle | facing
+    this.stateTimer = 0;
+    this.targetX = null;
+    this._raf = null;
+    this._tick = this._tick.bind(this);
+    this._boundClick = this._onClick.bind(this);
+    this.el.addEventListener("click",this._boundClick);
+    this._start();
+  }
+  _src(d){return `/static/assets/walker/${d}.png`}
+  _face(d){this.sprite.src=this._src(d);}
+  _setDir(dx){
+    this.dir = dx>0?1:-1;
+    const d = dx>0?"right":"left";
+    this._face(WALKER_DIRS[d]);
+  }
+  _start(){
+    this._face(this.dir>0?"east":"west");
+    this._updatePos();
+    this._raf = requestAnimationFrame(this._tick);
+  }
+  _updatePos(){
+    const w = window.innerWidth;
+    this.sprite.style.transform = `translateX(${this.x}px) scaleX(${this.dir>0?1:-1})`;
+    this.shadow.style.transform = `translateX(${this.x+10}px) scale(1)`;
+  }
+  _tick(ts){
+    const dt = 16.7; // assume ~60fps
+    const w = window.innerWidth;
+    if(this.state === "walk"){
+      this.x += this.dir*this.speed*(dt/1000);
+      // bobbing
+      const bob = Math.sin(ts/120)*-3;
+      this.sprite.style.transform = `translateX(${this.x}px) scaleX(${this.dir>0?1:-1}) translateY(${bob}px)`;
+      this.shadow.style.transform = `translateX(${this.x+10}px) scale(${1-Math.abs(bob)/12})`;
+      // edge turn
+      if(this.x <= 0){this.x=0;this.dir=1;this._face("east");}
+      if(this.x >= w-48){this.x=w-48;this.dir=-1;this._face("west");}
+      // random idle
+      if(Math.random() < .0015){this._enterIdle()}
+    } else if(this.state === "idle"){
+      this.stateTimer -= dt;
+      // gentle breathe
+      const breathe = Math.sin(ts/300)*-1.5;
+      this.sprite.style.transform = `translateX(${this.x}px) scaleX(${this.dir>0?1:-1}) translateY(${breathe}px)`;
+      if(this.stateTimer <= 0){this._enterWalk()}
+    } else if(this.state === "facing"){
+      this.stateTimer -= dt;
+      if(this.stateTimer <= 0){this._enterWalk()}
+    }
+    this._raf = requestAnimationFrame(this._tick);
+  }
+  _enterWalk(){
+    this.state="walk";this.speed=35+Math.random()*25;
+    this._face(this.dir>0?"east":"west");
+  }
+  _enterIdle(){
+    this.state="idle";this.stateTimer=1500+Math.random()*2000;
+    const looks = ["north","south","east","west","north-east","north-west","south-east","south-west"];
+    this._face(looks[Math.floor(Math.random()*looks.length)]);
+  }
+  _enterFacing(dirKey,duration=1500){
+    this.state="facing";this.stateTimer=duration;
+    const d = WALKER_DIRS[dirKey] || "south";
+    this._face(d);
+  }
+  _onClick(){
+    // click = surprised jump
+    this.sprite.style.transition="transform .15s ease";
+    this.sprite.style.transform=`translateX(${this.x}px) scaleX(${this.dir>0?1:-1}) translateY(-10px) scale(1.1)`;
+    setTimeout(()=>{this.sprite.style.transition="";this._enterIdle();},300);
+  }
+  faceTab(tabName){
+    const map={home:"down",meals:"down",calendar:"up",plan:"up",finance:"down",profile:"down"};
+    this._enterFacing(map[tabName]||"down",1200);
+  }
+  destroy(){
+    if(this._raf) cancelAnimationFrame(this._raf);
+    this.el.removeEventListener("click",this._boundClick);
+  }
+}
+
 boot();

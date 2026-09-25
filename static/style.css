@@ -392,6 +392,12 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 [data-theme="dark"] .login-profile{background:var(--surface-tint)}
 [data-theme="dark"] .login-profile.active{background:var(--primary-soft)}
 
+.pixel-walker{position:fixed;left:0;right:0;bottom:56px;z-index:95;height:48px;pointer-events:none;overflow:hidden}
+.pixel-walker img{position:absolute;bottom:0;width:48px;height:48px;image-rendering:pixelated;image-rendering:crisp-edges;transition:transform .2s ease;pointer-events:auto;cursor:pointer}
+.pixel-walker .walker-shadow{position:absolute;bottom:2px;width:28px;height:6px;background:rgba(0,0,0,.12);border-radius:50%;filter:blur(1px);transform:translateX(10px);animation:shadowPulse .6s ease-in-out infinite alternate}
+@keyframes walkerBob{0%{transform:translateY(0)}100%{transform:translateY(-3px)}}
+@keyframes shadowPulse{0%{transform:translateX(10px) scale(1)}100%{transform:translateX(10px) scale(.85)}}
+
 @media(max-width:760px){
   .hero{padding:14px 16px}
   .hero h1{font-size:20px}
