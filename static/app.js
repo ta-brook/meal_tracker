@@ -402,7 +402,7 @@ function progress(){
   }
 }
 function applyWalker(){
-  const show=localStorage.getItem(KEY+"_walker")!=="false";
+  const show=localStorage.getItem(KEY+"_walker")==="true";
   $("pixelWalker").hidden=!show;
   if($("walkerToggle")) $("walkerToggle").checked=show;
   if(show){
