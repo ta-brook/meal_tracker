@@ -775,7 +775,7 @@ class PixelWalker {
       this.stateTimer -= dt;
       if(this.stateTimer <= 0){this._enterWalk()}
     } else if(this.state === "drag"){
-      // position updated in _onPointerMove; shadow stays near bottom
+      this.sprite.style.transform = `translate(${this.x}px,${this.y}px) scaleX(${this.dir>0?1:-1})`;
       this.shadow.style.transform = `translate(${this.x+10}px,${this.y+46}px) scale(1.3)`;
     }
     this._raf = requestAnimationFrame(this._tick);
