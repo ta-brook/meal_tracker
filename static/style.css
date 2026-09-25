@@ -385,7 +385,8 @@ hr{border:0;border-top:1px solid var(--border);margin:22px 0}
 .login-avatar{font-size:28px;line-height:1}
 .login-label{display:block;text-align:left;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:16px}
 .login-label input{width:100%;margin-top:6px}
-.login-remember{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:16px;justify-content:center}
+.login-remember{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:16px;text-align:center;cursor:pointer}
+.login-remember input[type="checkbox"]{width:18px;height:18px;margin:0;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
 .login-btn{width:100%;padding:12px;font-size:15px}
 .login-error{color:var(--danger-deep);font-size:13px;font-weight:700;margin-top:10px;min-height:20px}
 [data-theme="dark"] .login-overlay{background:#1A1E1D}
