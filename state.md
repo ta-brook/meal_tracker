@@ -97,7 +97,7 @@ by `normalize_user` (never raises):
 
 | Tab | Sections inside | Description |
 |---|---|---|
-| **Home** | `dashboard` | Day overview: stats, health score card (5-dimensional), calorie bar, macro-goal bars, water, "Activity & Vitals", "Today's plate" (animated), hub cards, today's chores, weekly activity, last-7-days, meals eaten today. |
+| **Home** | `dashboard` | Day overview: stats, health score card (5-dimensional), **weekly nutrition summary** (7-day avg + trend arrows), calorie bar, macro-goal bars, water, "Activity & Vitals", "Today's plate" (animated), hub cards, today's chores, weekly activity, last-7-days, meals eaten today. |
 | **Meals** | `meals` + `prices` | Shared custom meals + editable catalog; search/add/edit/delete. Market Prices (Makro PRO) sub-section. |
 | **Calendar** | `calendar` + `mood` | Month grid with events (color-coded),     filters All/Shared/book/jingjing. **Month · List · Mood sub-tabs.** Mood selector + month summary inside the Mood sub-tab. |
 | **Plan** | `plan` + `shopping` + `chores` | 4-week prep plan per gender + grocery list (localStorage checks). Shopping list (Food/Home/Health). Shared chores tick-off. |

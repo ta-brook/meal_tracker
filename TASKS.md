@@ -42,9 +42,21 @@
 - **Files:** `templates/index.html`, `static/style.css`, `static/app.js`, `.interface-design/system.md`, `state.md`
 
 ## Ticket #7 — Per-User Login Page
-- **Status:** IN PROGRESS 🚧
+- **Status:** DONE ✅
 - **GitHub Issue:** #7 (created)
 - **Priority:** High
 - **Description:** Add a proper login screen with profile selection (book / jingjing) and per-user password auth. Keep APP_PASSWORD as master fallback. Remember-me via localStorage.
 - **Spec:** `SPEC.md`
 - **Files:** `api/config.py`, `api/index.py`, `templates/index.html`, `static/app.js`, `static/style.css`, `state.md`
+
+## Ticket #8 — Pixel Companion (Dark Lord Walker)
+- **Status:** DONE ✅
+- **Priority:** Low
+- **Description:** Add an optional draggable pixel-art character that wanders above the bottom nav. Uses static rotation frames + walking GIF. Hidden by default, toggle in Settings.
+- **Files:** `static/app.js`, `static/style.css`, `templates/index.html`, `static/assets/walker/`
+
+## Ticket #9 — Weekly Nutrition Summary + Trend Arrows
+- **Status:** DONE ✅
+- **Priority:** Medium
+- **Description:** Add 7-day nutrition averages on Home dashboard with week-over-week trend arrows (↑↓%). Also add trend arrows to weekly activity (steps, sleep) and weight progress.
+- **Files:** `static/app.js`, `templates/index.html`
