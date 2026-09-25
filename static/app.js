@@ -221,8 +221,13 @@ function renderWeeklyNutrition(){
   const thisWeek=weekNutrition(0),lastWeek=weekNutrition(1);
   const card=$("weeklyNutritionCard");
   if(!card)return;
-  if(thisWeek.days===0){card.style.display="none";return}
   card.style.display="";
+  if(thisWeek.days===0){
+    $("weeklyNutritionSub").textContent="Log meals to see your weekly summary";
+    $("weeklyNutritionStats").innerHTML='<p class="muted" style="padding:12px 0">No meals logged in the last 7 days. Start logging and your weekly averages will appear here.</p>';
+    $("weeklyNutritionBars").innerHTML="";
+    return;
+  }
   $("weeklyNutritionSub").textContent=`${thisWeek.days}/7 days logged • avg per logged day`;
   const ta=(k,label)=>trendArrow(thisWeek.avg[k],lastWeek.avg[k],label);
   $("weeklyNutritionStats").innerHTML=[
