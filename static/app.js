@@ -723,8 +723,8 @@ class PixelWalker {
     this._downTime = 0;
     this._downX = 0;
     this._downY = 0;
-    this._offsetX = 0;
-    this._offsetY = 0;
+    this._startX = 0;
+    this._startY = 0;
     // bind handlers
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onPointerMove = this._onPointerMove.bind(this);
@@ -824,7 +824,7 @@ class PixelWalker {
   _onPointerDown(e){
     const c=this._client(e);
     this._downTime=Date.now();this._downX=c.x;this._downY=c.y;
-    this._offsetX=c.x-this.x;this._offsetY=c.y-(this.el.getBoundingClientRect().top+this.y);
+    this._startX=this.x;this._startY=this.y;
     if(e.type==="touchstart") e.preventDefault();
   }
   _onPointerMove(e){
@@ -836,8 +836,8 @@ class PixelWalker {
     }
     if(this.dragging){
       if(e.type==="touchmove") e.preventDefault();
-      this.x=c.x-this._offsetX;this.y=c.y-this._offsetY;
-      // keep roughly in bounds
+      this.x=this._startX+dx;this.y=this._startY+dy;
+      // keep roughly in bounds horizontally
       const w=window.innerWidth;this.x=Math.max(-20,Math.min(w-28,this.x));
     }
   }
