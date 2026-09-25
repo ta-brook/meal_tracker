@@ -792,7 +792,24 @@ class PixelWalker {
     const d = WALKER_DIRS[dirKey] || "south";
     this._face(d);
   }
-  _doJump(){
+  _faceClick(cx,cy){
+    const r=this.el.getBoundingClientRect();
+    const dx=cx-(r.left+this.x+24),dy=cy-(r.top+this.y+24);
+    const a=Math.atan2(dy,dx)*180/Math.PI;
+    let d="south";
+    if(a>=-22.5&&a<22.5)d="east";
+    else if(a>=22.5&&a<67.5)d="south-east";
+    else if(a>=67.5&&a<112.5)d="south";
+    else if(a>=112.5&&a<157.5)d="south-west";
+    else if(a>=157.5||a<-157.5)d="west";
+    else if(a>=-157.5&&a<-112.5)d="north-west";
+    else if(a>=-112.5&&a<-67.5)d="north";
+    else if(a>=-67.5&&a<-22.5)d="north-east";
+    this._face(d);
+    this.dir=(dx>0)?1:-1;
+  }
+  _doJump(cx,cy){
+    this._faceClick(cx,cy);
     this.sprite.style.transition="transform .15s ease";
     this.sprite.style.transform=`translate(${this.x}px,${this.y-10}px) scaleX(${this.dir>0?1:-1}) scale(1.1)`;
     setTimeout(()=>{this.sprite.style.transition="";this._enterIdle();},300);
@@ -836,7 +853,7 @@ class PixelWalker {
       this.sprite.style.transform=`translate(${this.x}px,${this.y-6}px) scaleX(${this.dir>0?1:-1})`;
       setTimeout(()=>{this.sprite.style.transition="";this._enterWalk();},180);
     } else if(dt<300 && Math.abs(dx)<5 && Math.abs(dy)<5){
-      this._doJump();
+      this._doJump(c.x,c.y);
     }
     this._downTime=0;
   }
