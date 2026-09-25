@@ -11,26 +11,12 @@
   },
   "height": null,
   "import_sources": {},
-  "logs": {
-    "2026-09-03": [],
-    "2026-09-22": [
-      "custom-7f065f7f-beee-4404-9f4c-613fd3d2781c"
-    ]
-  },
+  "logs": {},
   "meals": [],
-  "moods": {
-    "2026-09-22": "good"
-  },
+  "moods": {},
   "name": "book",
   "protein_goal": null,
   "target": 2000,
-  "water": {
-    "2026-09-22": 2
-  },
-  "weights": [
-    {
-      "date": "2026-09-22",
-      "weight": 90.0
-    }
-  ]
+  "water": {},
+  "weights": []
 }
